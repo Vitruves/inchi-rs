@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.77"
 authors = ["Johan H.G. Natter <johan.natter@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Vitruves/inchi-rs"

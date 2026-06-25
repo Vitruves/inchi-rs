@@ -129,13 +129,14 @@ fn molecule_builder_matches_known_identifiers() {
         } else {
             BondOrder::Single
         };
-        benzene
-            .add_bond(c[i], c[(i + 1) % 6], order)
-            .expect("bond");
+        benzene.add_bond(c[i], c[(i + 1) % 6], order).expect("bond");
     }
     let inchi = benzene.to_inchi(Options::new()).expect("gen").into_inchi();
     assert_eq!(inchi, "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H");
-    assert_eq!(inchikey(&inchi).expect("key"), "UHOVQNZJYSORNB-UHFFFAOYSA-N");
+    assert_eq!(
+        inchikey(&inchi).expect("key"),
+        "UHOVQNZJYSORNB-UHFFFAOYSA-N"
+    );
 
     // Glycine: H2N-CH2-C(=O)-OH.
     let mut gly = Molecule::new();
@@ -150,17 +151,19 @@ fn molecule_builder_matches_known_identifiers() {
     gly.add_bond(cc, oh, BondOrder::Single).expect("bond");
     let inchi = gly.to_inchi(Options::new()).expect("gen").into_inchi();
     assert_eq!(inchi, "InChI=1S/C2H5NO2/c3-1-2(4)5/h1,3H2,(H,4,5)");
-    assert_eq!(inchikey(&inchi).expect("key"), "DHMQDGOQFOQNFH-UHFFFAOYSA-N");
+    assert_eq!(
+        inchikey(&inchi).expect("key"),
+        "DHMQDGOQFOQNFH-UHFFFAOYSA-N"
+    );
 }
 
 /// `struct_from_inchi` must recover the right heavy-atom and bond counts for a
 /// fused-ring drug molecule (caffeine: bicyclic purine, ten heavy atoms).
 #[test]
 fn parse_structure_of_caffeine() {
-    let s = struct_from_inchi(
-        "InChI=1S/C8H10N4O2/c1-10-4-9-6-5(10)7(13)12(3)8(14)11(6)2/h4H,1-3H3",
-    )
-    .expect("parse");
+    let s =
+        struct_from_inchi("InChI=1S/C8H10N4O2/c1-10-4-9-6-5(10)7(13)12(3)8(14)11(6)2/h4H,1-3H3")
+            .expect("parse");
     // 8 carbons + 4 nitrogens + 2 oxygens = 14 heavy atoms.
     assert_eq!(s.atoms().len(), 14);
     let carbons = s.atoms().iter().filter(|a| a.element == "C").count();
@@ -181,9 +184,8 @@ fn parse_recovers_stereo() {
     .expect("parse");
     assert_eq!(trp.stereo().len(), 1);
 
-    let ala =
-        struct_from_inchi("InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1")
-            .expect("parse");
+    let ala = struct_from_inchi("InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1")
+        .expect("parse");
     assert_eq!(ala.stereo().len(), 1);
 
     // Glucose carries five stereocenters in the pyranose ring.
@@ -391,7 +393,10 @@ fn polymer_round_trip_parse() {
     // An ordinary InChI parses with no polymer data.
     let plain = struct_from_inchi_ex("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3").expect("parse");
     assert!(plain.polymer_units.is_empty());
-    assert_eq!(plain.structure, struct_from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3").unwrap());
+    assert_eq!(
+        plain.structure,
+        struct_from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3").unwrap()
+    );
 }
 
 /// Errors are surfaced, not panicked, for malformed input across entry points.

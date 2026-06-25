@@ -565,7 +565,11 @@ impl Molecule {
         for stereo in &self.stereo {
             let mut s: inchi_sys::inchi_Stereo0D = unsafe { std::mem::zeroed() };
             match *stereo {
-                Stereo::Tetrahedral { center, neighbors, parity } => {
+                Stereo::Tetrahedral {
+                    center,
+                    neighbors,
+                    parity,
+                } => {
                     s.central_atom = check(center)?;
                     s.neighbor = [
                         check(neighbors[0])?,
@@ -587,7 +591,11 @@ impl Molecule {
                     s.type_ = inchi_sys::INCHI_StereoType_DoubleBond as i8;
                     s.parity = parity.code();
                 }
-                Stereo::Allene { center, ends, parity } => {
+                Stereo::Allene {
+                    center,
+                    ends,
+                    parity,
+                } => {
                     s.central_atom = check(center)?;
                     s.neighbor = [
                         check(ends[0])?,
@@ -626,7 +634,9 @@ impl PolymerBacking {
         let one_based = |idx: usize| -> Result<std::os::raw::c_int> {
             if idx >= num_atoms {
                 return Err(InchiError::InvalidStructure {
-                    reason: format!("polymer unit references nonexistent atom {idx} (have {num_atoms})"),
+                    reason: format!(
+                        "polymer unit references nonexistent atom {idx} (have {num_atoms})"
+                    ),
                 });
             }
             i32::try_from(idx + 1).map_err(|_| InchiError::InvalidStructure {
@@ -726,9 +736,11 @@ fn push_neighbor(
     let to_idx = i16::try_from(to).map_err(|_| InchiError::InvalidStructure {
         reason: format!("atom index {to} out of range"),
     })?;
-    let atom = atoms.get_mut(from).ok_or_else(|| InchiError::InvalidStructure {
-        reason: format!("bond references nonexistent atom {from}"),
-    })?;
+    let atom = atoms
+        .get_mut(from)
+        .ok_or_else(|| InchiError::InvalidStructure {
+            reason: format!("bond references nonexistent atom {from}"),
+        })?;
     let slot = atom.num_bonds as usize;
     if slot >= MAX_BONDS_PER_ATOM {
         return Err(InchiError::InvalidStructure {
@@ -762,7 +774,10 @@ fn write_elname(dst: &mut [std::os::raw::c_char; ELNAME_CAP], symbol: &str) -> R
     }
     if bytes.len() >= ELNAME_CAP {
         return Err(InchiError::InvalidStructure {
-            reason: format!("element symbol {symbol:?} is too long (max {} chars)", ELNAME_CAP - 1),
+            reason: format!(
+                "element symbol {symbol:?} is too long (max {} chars)",
+                ELNAME_CAP - 1
+            ),
         });
     }
     for (slot, &b) in dst.iter_mut().zip(bytes) {

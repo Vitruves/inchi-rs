@@ -43,7 +43,10 @@ impl InchiValidity {
     /// ```
     #[must_use]
     pub fn is_valid(self) -> bool {
-        matches!(self, InchiValidity::Standard | InchiValidity::NonStandard | InchiValidity::Beta)
+        matches!(
+            self,
+            InchiValidity::Standard | InchiValidity::NonStandard | InchiValidity::Beta
+        )
     }
 }
 
@@ -78,7 +81,10 @@ impl InchiKeyValidity {
     /// ```
     #[must_use]
     pub fn is_valid(self) -> bool {
-        matches!(self, InchiKeyValidity::Standard | InchiKeyValidity::NonStandard)
+        matches!(
+            self,
+            InchiKeyValidity::Standard | InchiKeyValidity::NonStandard
+        )
     }
 }
 

@@ -164,7 +164,14 @@ pub fn struct_from_inchi(inchi: impl AsRef<str>) -> Result<Structure> {
 
     // SAFETY: on success the library populated `num_atoms` atoms at `atom` and
     // `num_stereo0D` stereo elements at `stereo0D` (either may be null/zero).
-    unsafe { convert_raw(out.raw.atom, out.raw.num_atoms, out.raw.stereo0D, out.raw.num_stereo0D) }
+    unsafe {
+        convert_raw(
+            out.raw.atom,
+            out.raw.num_atoms,
+            out.raw.stereo0D,
+            out.raw.num_stereo0D,
+        )
+    }
 }
 
 /// RAII guard ensuring `FreeStructFromINCHIEx` runs for the extended output.
@@ -233,13 +240,21 @@ pub fn struct_from_inchi_ex(inchi: impl AsRef<str>) -> Result<ExtendedStructure>
     // SAFETY: on success the atom/stereo arrays are populated as in the plain
     // struct output; the field layout matches `convert_raw`'s expectations.
     let structure = unsafe {
-        convert_raw(out.raw.atom, out.raw.num_atoms, out.raw.stereo0D, out.raw.num_stereo0D)
+        convert_raw(
+            out.raw.atom,
+            out.raw.num_atoms,
+            out.raw.stereo0D,
+            out.raw.num_stereo0D,
+        )
     }?;
 
     // SAFETY: `polymer`, when non-null, points to a populated polymer block.
     let polymer_units = unsafe { read_polymer(out.raw.polymer) };
 
-    Ok(ExtendedStructure { structure, polymer_units })
+    Ok(ExtendedStructure {
+        structure,
+        polymer_units,
+    })
 }
 
 /// Reads the polymer block of an extended output into safe [`PolymerUnit`]s.
@@ -420,7 +435,11 @@ unsafe fn convert_raw(
     // SAFETY: forwarded from the caller's guarantee on `stereo0d`/`num_stereo0d`.
     let stereo = unsafe { read_stereo(stereo0d, num_stereo0d, num_atoms) };
 
-    Ok(Structure { atoms, bonds, stereo })
+    Ok(Structure {
+        atoms,
+        bonds,
+        stereo,
+    })
 }
 
 /// # Safety
@@ -457,13 +476,21 @@ unsafe fn read_stereo(
         let ty = cs.type_ as u32;
         if ty == inchi_sys::INCHI_StereoType_Tetrahedral {
             if let Some(center) = idx(cs.central_atom) {
-                out.push(Stereo::Tetrahedral { center, neighbors: ends, parity });
+                out.push(Stereo::Tetrahedral {
+                    center,
+                    neighbors: ends,
+                    parity,
+                });
             }
         } else if ty == inchi_sys::INCHI_StereoType_DoubleBond {
             out.push(Stereo::DoubleBond { ends, parity });
         } else if ty == inchi_sys::INCHI_StereoType_Allene {
             if let Some(center) = idx(cs.central_atom) {
-                out.push(Stereo::Allene { center, ends, parity });
+                out.push(Stereo::Allene {
+                    center,
+                    ends,
+                    parity,
+                });
             }
         }
     }

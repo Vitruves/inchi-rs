@@ -167,11 +167,12 @@ impl fmt::Display for InchiError {
             InchiError::Failed { status, message } => {
                 write!(f, "InChI generation failed: {status}: {message}")
             }
-            InchiError::EmptyResult => {
-                f.write_str("the InChI library produced an empty result")
-            }
+            InchiError::EmptyResult => f.write_str("the InChI library produced an empty result"),
             InchiError::InteriorNul { position } => {
-                write!(f, "input contains an interior NUL byte at position {position}")
+                write!(
+                    f,
+                    "input contains an interior NUL byte at position {position}"
+                )
             }
             InchiError::InvalidStructure { reason } => {
                 write!(f, "invalid structure: {reason}")

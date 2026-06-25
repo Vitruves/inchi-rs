@@ -87,7 +87,7 @@
 //!
 //! # Minimum supported Rust version
 //!
-//! This crate supports Rust **1.74** and later. Raising the MSRV is treated as
+//! This crate supports Rust **1.77** and later. Raising the MSRV is treated as
 //! a semver-breaking change.
 
 #![deny(missing_docs)]
@@ -245,8 +245,16 @@ pub fn inchikey_with_hashes(
     let mut buf1 = [0u8; 65];
     let mut buf2 = [0u8; 65];
 
-    let ptr1 = if extra1 { buf1.as_mut_ptr() as *mut c_char } else { ptr::null_mut() };
-    let ptr2 = if extra2 { buf2.as_mut_ptr() as *mut c_char } else { ptr::null_mut() };
+    let ptr1 = if extra1 {
+        buf1.as_mut_ptr() as *mut c_char
+    } else {
+        ptr::null_mut()
+    };
+    let ptr2 = if extra2 {
+        buf2.as_mut_ptr() as *mut c_char
+    } else {
+        ptr::null_mut()
+    };
 
     let _guard = raw::lock();
     // SAFETY: `src` is a valid NUL-terminated string; `key` is a 28-byte

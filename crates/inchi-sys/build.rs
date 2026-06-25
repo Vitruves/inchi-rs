@@ -12,28 +12,74 @@ use std::path::{Path, PathBuf};
 /// Object files compiled from `INCHI_BASE/src` (the core algorithm + the
 /// classic API). Taken verbatim from `INCHI_LIB_OBJS` in the upstream makefile.
 const BASE_SRC: &[&str] = &[
-    "ichican2", "ichicano", "ichi_io", "ichierr", "ichicans", "ichiisot",
-    "ichimak2", "ichimake", "ichimap1", "ichimap2", "ichimap4", "ichinorm",
-    "ichiparm", "ichiprt1", "ichiprt2", "ichiprt3", "ichiqueu", "ichiring",
-    "ichisort", "ichister", "ichitaut", "ichi_bns", "ichiread", "ichirvr1",
-    "ichirvr2", "ichirvr3", "ichirvr4", "ichirvr5", "ichirvr6", "ichirvr7",
-    "ikey_dll", "ikey_base26", "mol_fmt1", "mol_fmt2", "mol_fmt3", "mol_fmt4",
-    "mol2atom", "readinch", "runichi", "runichi2", "runichi3", "runichi4",
-    "sha2", "strutil", "util", "bcf_s",
+    "ichican2",
+    "ichicano",
+    "ichi_io",
+    "ichierr",
+    "ichicans",
+    "ichiisot",
+    "ichimak2",
+    "ichimake",
+    "ichimap1",
+    "ichimap2",
+    "ichimap4",
+    "ichinorm",
+    "ichiparm",
+    "ichiprt1",
+    "ichiprt2",
+    "ichiprt3",
+    "ichiqueu",
+    "ichiring",
+    "ichisort",
+    "ichister",
+    "ichitaut",
+    "ichi_bns",
+    "ichiread",
+    "ichirvr1",
+    "ichirvr2",
+    "ichirvr3",
+    "ichirvr4",
+    "ichirvr5",
+    "ichirvr6",
+    "ichirvr7",
+    "ikey_dll",
+    "ikey_base26",
+    "mol_fmt1",
+    "mol_fmt2",
+    "mol_fmt3",
+    "mol_fmt4",
+    "mol2atom",
+    "readinch",
+    "runichi",
+    "runichi2",
+    "runichi3",
+    "runichi4",
+    "sha2",
+    "strutil",
+    "util",
+    "bcf_s",
 ];
 
 /// Object files compiled from `INCHI_API/libinchi/src` (the DLL/API layer:
 /// `GetINCHI`, `FreeINCHI`, `MakeINCHIFromMolfileText`, ...).
 const LIBINCHI_SRC: &[&str] = &[
-    "ichilnct", "inchi_dll", "inchi_dll_main", "inchi_dll_a", "inchi_dll_a2",
+    "ichilnct",
+    "inchi_dll",
+    "inchi_dll_main",
+    "inchi_dll_a",
+    "inchi_dll_a2",
     "inchi_dll_b",
 ];
 
 /// Object files compiled from `INCHI_API/libinchi/src/ixa` (the InChI
 /// eXtensible API).
 const IXA_SRC: &[&str] = &[
-    "ixa_inchikey_builder", "ixa_read_mol", "ixa_status", "ixa_builder",
-    "ixa_mol", "ixa_read_inchi",
+    "ixa_inchikey_builder",
+    "ixa_read_mol",
+    "ixa_status",
+    "ixa_builder",
+    "ixa_mol",
+    "ixa_read_inchi",
 ];
 
 fn main() {
@@ -128,7 +174,9 @@ fn regenerate_bindings(base: &Path) {
         .allowlist_type("RetVal.*")
         .allowlist_type("INCHI_.*")
         .allowlist_var("INCHI_.*")
-        .allowlist_var("(MAXVAL|NO_ATOM|ATOM_EL_LEN|NUM_H_ISOTOPES|ISOTOPIC_SHIFT_FLAG|ISOTOPIC_SHIFT_MAX)")
+        .allowlist_var(
+            "(MAXVAL|NO_ATOM|ATOM_EL_LEN|NUM_H_ISOTOPES|ISOTOPIC_SHIFT_FLAG|ISOTOPIC_SHIFT_MAX)",
+        )
         // Plain integer constants: sound for values the C library returns
         // (an out-of-range return code can never be UB), and the constants are
         // accessible bare (e.g. `inchi_Ret_OKAY`).

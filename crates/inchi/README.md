@@ -66,7 +66,7 @@ Full reference, semantics, and runnable examples: **<https://docs.rs/inchi>**.
 ## Notes
 
 - The InChI C library keeps `static` state and is not re-entrant; all calls are serialized behind a global lock. The public types are `Send + Sync`.
-- MSRV: Rust 1.74. Raising it is a semver-breaking change.
+- MSRV: Rust 1.77. Raising it is a semver-breaking change.
 
 ## License
 

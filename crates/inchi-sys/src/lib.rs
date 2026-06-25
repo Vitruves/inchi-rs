@@ -62,11 +62,7 @@ mod smoke {
 
         let mut out: inchi_Output = unsafe { std::mem::zeroed() };
         let rc = unsafe {
-            MakeINCHIFromMolfileText(
-                moltext.as_ptr(),
-                options.as_ptr() as *mut c_char,
-                &mut out,
-            )
+            MakeINCHIFromMolfileText(moltext.as_ptr(), options.as_ptr() as *mut c_char, &mut out)
         };
 
         // 0 == okay, 1 == warning; both yield a valid InChI string.

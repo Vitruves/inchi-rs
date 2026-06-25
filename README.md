@@ -1,6 +1,6 @@
 # inchi-rs
 
-[![crates.io](https://img.shields.io/crates/v/inchi.svg)](https://crates.io/crates/inchi) [![docs.rs](https://docs.rs/inchi/badge.svg)](https://docs.rs/inchi) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+[![CI](https://github.com/Vitruves/inchi-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Vitruves/inchi-rs/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/inchi.svg)](https://crates.io/crates/inchi) [![docs.rs](https://docs.rs/inchi/badge.svg)](https://docs.rs/inchi) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
 Rust bindings to the IUPAC [InChI](https://www.inchi-trust.org/) reference library, for generating and parsing **InChI** and **InChIKey** chemical identifiers. The InChI 1.07.3 C library is vendored and statically linked — no system install, no network at build time.
 
@@ -56,7 +56,7 @@ Full reference and runnable examples: **<https://docs.rs/inchi>**.
 ## Notes
 
 - The InChI C library keeps `static` state and is not re-entrant; all calls are serialized behind a global lock. Public types are `Send + Sync`.
-- MSRV: Rust 1.74.
+- MSRV: Rust 1.77.
 - Vendored InChI version, included files, and the single local memory-safety patch are documented in [`crates/inchi-sys/vendor/README.md`](crates/inchi-sys/vendor/README.md).
 
 ## Development

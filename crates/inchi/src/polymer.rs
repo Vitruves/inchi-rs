@@ -198,7 +198,9 @@ impl PolymerUnit {
 ///
 /// `raw` must be a valid pointer to an `inchi_Input_PolymerUnit` whose `alist`
 /// and `blist` arrays hold `na` and `2 * nb` valid entries respectively.
-pub(crate) unsafe fn read_unit(raw: *const inchi_sys::inchi_Input_PolymerUnit) -> Option<PolymerUnit> {
+pub(crate) unsafe fn read_unit(
+    raw: *const inchi_sys::inchi_Input_PolymerUnit,
+) -> Option<PolymerUnit> {
     if raw.is_null() {
         return None;
     }
