@@ -115,15 +115,19 @@ fn compile_native(base: &Path, libinchi: &Path, ixa: &Path) {
     let target = env("TARGET");
     let msvc = target.contains("msvc");
 
-    // Preprocessor defines, matching the upstream makefile build of the API.
+    // Preprocessor defines for a statically linked build of the InChI API.
+    //
+    // `TARGET_API_LIB` selects the library API surface. `COMPILE_ANSI_ONLY`
+    // drops the non-ANSI console/display/timer code we never call, keeping the
+    // build portable across gcc, clang, and MSVC.
+    //
+    // We deliberately do NOT define `BUILD_LINK_AS_DLL`: that would make the
+    // headers mark the API `__declspec(dllimport)` on MSVC, which is illegal
+    // when *compiling* (defining) those functions into a static archive
+    // (error C2491). Leaving it undefined selects the headers' static-linkage
+    // path (empty `INCHI_API`) on every platform.
     build.define("TARGET_API_LIB", None);
-    if msvc {
-        // Windows/MSVC support is structured but unverified; matches the
-        // `C_SO_OPTIONS` Windows branch of the upstream makefile.
-        build.define("BUILD_LINK_AS_DLL", None);
-    } else {
-        build.define("COMPILE_ANSI_ONLY", None);
-    }
+    build.define("COMPILE_ANSI_ONLY", None);
 
     // The InChI sources rely on type punning that strict aliasing would break.
     build.flag_if_supported("-fno-strict-aliasing");
