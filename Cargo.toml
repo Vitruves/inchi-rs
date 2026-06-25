@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+authors = ["Johan H.G. Natter <johan.natter@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Vitruves/inchi-rs"
+homepage = "https://github.com/Vitruves/inchi-rs"
+keywords = ["inchi", "inchikey", "chemistry", "cheminformatics", "iupac"]
+categories = ["science", "api-bindings"]
+
+[workspace.dependencies]
+inchi-sys = { version = "0.1.0", path = "crates/inchi-sys" }
+
+[profile.release]
+opt-level = 3

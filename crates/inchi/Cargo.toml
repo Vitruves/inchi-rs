@@ -1,0 +1,27 @@
+[package]
+name = "inchi"
+description = "Safe, idiomatic Rust bindings to the IUPAC InChI library for generating InChI and InChIKey identifiers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+[dependencies]
+inchi-sys.workspace = true
+
+[features]
+default = ["key"]
+# InChIKey computation (`GetINCHIKeyFromINCHI`). Enabled by default.
+key = []
+# Forwarded to `inchi-sys`: regenerate the FFI bindings with bindgen at build time.
+regenerate-bindings = ["inchi-sys/regenerate-bindings"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

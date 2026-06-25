@@ -1,0 +1,46 @@
+[package]
+name = "inchi-sys"
+description = "Low-level FFI bindings to the vendored IUPAC InChI 1.07 reference C library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+# Declaring `links` prevents two copies of the native InChI library from being
+# linked into a single binary (Cargo enforces a single `links = "inchi"` crate).
+links = "inchi"
+build = "build.rs"
+# Vendored C source is large; ship only what `build.rs` actually compiles plus
+# the metadata files. This keeps the published `.crate` lean and reproducible.
+include = [
+    "src/**/*.rs",
+    "build.rs",
+    "README.md",
+    "vendor/README.md",
+    "vendor/inchi/LICENSE",
+    "vendor/inchi/INCHI_BASE/src/*.c",
+    "vendor/inchi/INCHI_BASE/src/*.h",
+    "vendor/inchi/INCHI_API/libinchi/src/*.c",
+    "vendor/inchi/INCHI_API/libinchi/src/*.h",
+    "vendor/inchi/INCHI_API/libinchi/src/ixa/*.c",
+    "vendor/inchi/INCHI_API/libinchi/src/ixa/*.h",
+]
+
+[features]
+default = []
+# Regenerate the FFI bindings from the vendored headers at build time using
+# `bindgen` (requires a working libclang). When disabled (the default), the
+# pre-generated, version-controlled `src/bindings.rs` is used instead, so the
+# common build path needs no libclang.
+regenerate-bindings = ["dep:bindgen"]
+
+[build-dependencies]
+cc = "1.0"
+bindgen = { version = "0.70", optional = true }
+
+[package.metadata.docs.rs]
+all-features = false
