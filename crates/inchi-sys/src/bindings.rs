@@ -50,32 +50,6 @@ pub struct tagInchiAtom {
     pub radical: S_CHAR,
     pub charge: S_CHAR,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagInchiAtom"][::std::mem::size_of::<tagInchiAtom>() - 120usize];
-    ["Alignment of tagInchiAtom"][::std::mem::align_of::<tagInchiAtom>() - 8usize];
-    ["Offset of field: tagInchiAtom::x"][::std::mem::offset_of!(tagInchiAtom, x) - 0usize];
-    ["Offset of field: tagInchiAtom::y"][::std::mem::offset_of!(tagInchiAtom, y) - 8usize];
-    ["Offset of field: tagInchiAtom::z"][::std::mem::offset_of!(tagInchiAtom, z) - 16usize];
-    ["Offset of field: tagInchiAtom::neighbor"]
-        [::std::mem::offset_of!(tagInchiAtom, neighbor) - 24usize];
-    ["Offset of field: tagInchiAtom::bond_type"]
-        [::std::mem::offset_of!(tagInchiAtom, bond_type) - 64usize];
-    ["Offset of field: tagInchiAtom::bond_stereo"]
-        [::std::mem::offset_of!(tagInchiAtom, bond_stereo) - 84usize];
-    ["Offset of field: tagInchiAtom::elname"]
-        [::std::mem::offset_of!(tagInchiAtom, elname) - 104usize];
-    ["Offset of field: tagInchiAtom::num_bonds"]
-        [::std::mem::offset_of!(tagInchiAtom, num_bonds) - 110usize];
-    ["Offset of field: tagInchiAtom::num_iso_H"]
-        [::std::mem::offset_of!(tagInchiAtom, num_iso_H) - 112usize];
-    ["Offset of field: tagInchiAtom::isotopic_mass"]
-        [::std::mem::offset_of!(tagInchiAtom, isotopic_mass) - 116usize];
-    ["Offset of field: tagInchiAtom::radical"]
-        [::std::mem::offset_of!(tagInchiAtom, radical) - 118usize];
-    ["Offset of field: tagInchiAtom::charge"]
-        [::std::mem::offset_of!(tagInchiAtom, charge) - 119usize];
-};
 pub type inchi_Atom = tagInchiAtom;
 pub const INCHI_StereoType_None: tagINCHIStereoType0D = 0;
 pub const INCHI_StereoType_DoubleBond: tagINCHIStereoType0D = 1;
@@ -98,19 +72,6 @@ pub struct tagINCHIStereo0D {
     pub type_: S_CHAR,
     pub parity: S_CHAR,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHIStereo0D"][::std::mem::size_of::<tagINCHIStereo0D>() - 12usize];
-    ["Alignment of tagINCHIStereo0D"][::std::mem::align_of::<tagINCHIStereo0D>() - 2usize];
-    ["Offset of field: tagINCHIStereo0D::neighbor"]
-        [::std::mem::offset_of!(tagINCHIStereo0D, neighbor) - 0usize];
-    ["Offset of field: tagINCHIStereo0D::central_atom"]
-        [::std::mem::offset_of!(tagINCHIStereo0D, central_atom) - 8usize];
-    ["Offset of field: tagINCHIStereo0D::type_"]
-        [::std::mem::offset_of!(tagINCHIStereo0D, type_) - 10usize];
-    ["Offset of field: tagINCHIStereo0D::parity"]
-        [::std::mem::offset_of!(tagINCHIStereo0D, parity) - 11usize];
-};
 pub type inchi_Stereo0D = tagINCHIStereo0D;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -121,21 +82,6 @@ pub struct tagINCHI_Input {
     pub num_atoms: AT_NUM,
     pub num_stereo0D: AT_NUM,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHI_Input"][::std::mem::size_of::<tagINCHI_Input>() - 32usize];
-    ["Alignment of tagINCHI_Input"][::std::mem::align_of::<tagINCHI_Input>() - 8usize];
-    ["Offset of field: tagINCHI_Input::atom"]
-        [::std::mem::offset_of!(tagINCHI_Input, atom) - 0usize];
-    ["Offset of field: tagINCHI_Input::stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_Input, stereo0D) - 8usize];
-    ["Offset of field: tagINCHI_Input::szOptions"]
-        [::std::mem::offset_of!(tagINCHI_Input, szOptions) - 16usize];
-    ["Offset of field: tagINCHI_Input::num_atoms"]
-        [::std::mem::offset_of!(tagINCHI_Input, num_atoms) - 24usize];
-    ["Offset of field: tagINCHI_Input::num_stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_Input, num_stereo0D) - 26usize];
-};
 impl Default for tagINCHI_Input {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -162,37 +108,6 @@ pub struct inchi_Input_PolymerUnit {
     pub alist: *mut ::std::os::raw::c_int,
     pub blist: *mut ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of inchi_Input_PolymerUnit"]
-        [::std::mem::size_of::<inchi_Input_PolymerUnit>() - 192usize];
-    ["Alignment of inchi_Input_PolymerUnit"]
-        [::std::mem::align_of::<inchi_Input_PolymerUnit>() - 8usize];
-    ["Offset of field: inchi_Input_PolymerUnit::id"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, id) - 0usize];
-    ["Offset of field: inchi_Input_PolymerUnit::type_"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, type_) - 4usize];
-    ["Offset of field: inchi_Input_PolymerUnit::subtype"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, subtype) - 8usize];
-    ["Offset of field: inchi_Input_PolymerUnit::conn"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, conn) - 12usize];
-    ["Offset of field: inchi_Input_PolymerUnit::label"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, label) - 16usize];
-    ["Offset of field: inchi_Input_PolymerUnit::na"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, na) - 20usize];
-    ["Offset of field: inchi_Input_PolymerUnit::nb"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, nb) - 24usize];
-    ["Offset of field: inchi_Input_PolymerUnit::xbr1"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, xbr1) - 32usize];
-    ["Offset of field: inchi_Input_PolymerUnit::xbr2"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, xbr2) - 64usize];
-    ["Offset of field: inchi_Input_PolymerUnit::smt"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, smt) - 96usize];
-    ["Offset of field: inchi_Input_PolymerUnit::alist"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, alist) - 176usize];
-    ["Offset of field: inchi_Input_PolymerUnit::blist"]
-        [::std::mem::offset_of!(inchi_Input_PolymerUnit, blist) - 184usize];
-};
 impl Default for inchi_Input_PolymerUnit {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -208,15 +123,6 @@ pub struct inchi_Input_Polymer {
     pub units: *mut *mut inchi_Input_PolymerUnit,
     pub n: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of inchi_Input_Polymer"][::std::mem::size_of::<inchi_Input_Polymer>() - 16usize];
-    ["Alignment of inchi_Input_Polymer"][::std::mem::align_of::<inchi_Input_Polymer>() - 8usize];
-    ["Offset of field: inchi_Input_Polymer::units"]
-        [::std::mem::offset_of!(inchi_Input_Polymer, units) - 0usize];
-    ["Offset of field: inchi_Input_Polymer::n"]
-        [::std::mem::offset_of!(inchi_Input_Polymer, n) - 8usize];
-};
 impl Default for inchi_Input_Polymer {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -246,43 +152,6 @@ pub struct inchi_Input_V3000 {
     pub n_sterac: ::std::os::raw::c_int,
     pub lists_sterac: *mut *mut ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of inchi_Input_V3000"][::std::mem::size_of::<inchi_Input_V3000>() - 104usize];
-    ["Alignment of inchi_Input_V3000"][::std::mem::align_of::<inchi_Input_V3000>() - 8usize];
-    ["Offset of field: inchi_Input_V3000::n_non_star_atoms"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_non_star_atoms) - 0usize];
-    ["Offset of field: inchi_Input_V3000::n_star_atoms"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_star_atoms) - 4usize];
-    ["Offset of field: inchi_Input_V3000::atom_index_orig"]
-        [::std::mem::offset_of!(inchi_Input_V3000, atom_index_orig) - 8usize];
-    ["Offset of field: inchi_Input_V3000::atom_index_fin"]
-        [::std::mem::offset_of!(inchi_Input_V3000, atom_index_fin) - 16usize];
-    ["Offset of field: inchi_Input_V3000::n_sgroups"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_sgroups) - 24usize];
-    ["Offset of field: inchi_Input_V3000::n_3d_constraints"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_3d_constraints) - 28usize];
-    ["Offset of field: inchi_Input_V3000::n_collections"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_collections) - 32usize];
-    ["Offset of field: inchi_Input_V3000::n_non_haptic_bonds"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_non_haptic_bonds) - 36usize];
-    ["Offset of field: inchi_Input_V3000::n_haptic_bonds"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_haptic_bonds) - 40usize];
-    ["Offset of field: inchi_Input_V3000::lists_haptic_bonds"]
-        [::std::mem::offset_of!(inchi_Input_V3000, lists_haptic_bonds) - 48usize];
-    ["Offset of field: inchi_Input_V3000::n_steabs"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_steabs) - 56usize];
-    ["Offset of field: inchi_Input_V3000::lists_steabs"]
-        [::std::mem::offset_of!(inchi_Input_V3000, lists_steabs) - 64usize];
-    ["Offset of field: inchi_Input_V3000::n_sterel"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_sterel) - 72usize];
-    ["Offset of field: inchi_Input_V3000::lists_sterel"]
-        [::std::mem::offset_of!(inchi_Input_V3000, lists_sterel) - 80usize];
-    ["Offset of field: inchi_Input_V3000::n_sterac"]
-        [::std::mem::offset_of!(inchi_Input_V3000, n_sterac) - 88usize];
-    ["Offset of field: inchi_Input_V3000::lists_sterac"]
-        [::std::mem::offset_of!(inchi_Input_V3000, lists_sterac) - 96usize];
-};
 impl Default for inchi_Input_V3000 {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -303,24 +172,6 @@ pub struct inchi_InputEx {
     pub polymer: *mut inchi_Input_Polymer,
     pub v3000: *mut inchi_Input_V3000,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of inchi_InputEx"][::std::mem::size_of::<inchi_InputEx>() - 48usize];
-    ["Alignment of inchi_InputEx"][::std::mem::align_of::<inchi_InputEx>() - 8usize];
-    ["Offset of field: inchi_InputEx::atom"][::std::mem::offset_of!(inchi_InputEx, atom) - 0usize];
-    ["Offset of field: inchi_InputEx::stereo0D"]
-        [::std::mem::offset_of!(inchi_InputEx, stereo0D) - 8usize];
-    ["Offset of field: inchi_InputEx::szOptions"]
-        [::std::mem::offset_of!(inchi_InputEx, szOptions) - 16usize];
-    ["Offset of field: inchi_InputEx::num_atoms"]
-        [::std::mem::offset_of!(inchi_InputEx, num_atoms) - 24usize];
-    ["Offset of field: inchi_InputEx::num_stereo0D"]
-        [::std::mem::offset_of!(inchi_InputEx, num_stereo0D) - 26usize];
-    ["Offset of field: inchi_InputEx::polymer"]
-        [::std::mem::offset_of!(inchi_InputEx, polymer) - 32usize];
-    ["Offset of field: inchi_InputEx::v3000"]
-        [::std::mem::offset_of!(inchi_InputEx, v3000) - 40usize];
-};
 impl Default for inchi_InputEx {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -336,15 +187,6 @@ pub struct tagINCHI_InputINCHI {
     pub szInChI: *mut ::std::os::raw::c_char,
     pub szOptions: *mut ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHI_InputINCHI"][::std::mem::size_of::<tagINCHI_InputINCHI>() - 16usize];
-    ["Alignment of tagINCHI_InputINCHI"][::std::mem::align_of::<tagINCHI_InputINCHI>() - 8usize];
-    ["Offset of field: tagINCHI_InputINCHI::szInChI"]
-        [::std::mem::offset_of!(tagINCHI_InputINCHI, szInChI) - 0usize];
-    ["Offset of field: tagINCHI_InputINCHI::szOptions"]
-        [::std::mem::offset_of!(tagINCHI_InputINCHI, szOptions) - 8usize];
-};
 impl Default for tagINCHI_InputINCHI {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -366,19 +208,6 @@ pub struct tagINCHI_Output {
     pub szMessage: *mut ::std::os::raw::c_char,
     pub szLog: *mut ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHI_Output"][::std::mem::size_of::<tagINCHI_Output>() - 32usize];
-    ["Alignment of tagINCHI_Output"][::std::mem::align_of::<tagINCHI_Output>() - 8usize];
-    ["Offset of field: tagINCHI_Output::szInChI"]
-        [::std::mem::offset_of!(tagINCHI_Output, szInChI) - 0usize];
-    ["Offset of field: tagINCHI_Output::szAuxInfo"]
-        [::std::mem::offset_of!(tagINCHI_Output, szAuxInfo) - 8usize];
-    ["Offset of field: tagINCHI_Output::szMessage"]
-        [::std::mem::offset_of!(tagINCHI_Output, szMessage) - 16usize];
-    ["Offset of field: tagINCHI_Output::szLog"]
-        [::std::mem::offset_of!(tagINCHI_Output, szLog) - 24usize];
-};
 impl Default for tagINCHI_Output {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -400,26 +229,6 @@ pub struct tagINCHI_OutputStruct {
     pub szLog: *mut ::std::os::raw::c_char,
     pub WarningFlags: [[::std::os::raw::c_ulong; 2usize]; 2usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHI_OutputStruct"][::std::mem::size_of::<tagINCHI_OutputStruct>() - 72usize];
-    ["Alignment of tagINCHI_OutputStruct"]
-        [::std::mem::align_of::<tagINCHI_OutputStruct>() - 8usize];
-    ["Offset of field: tagINCHI_OutputStruct::atom"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, atom) - 0usize];
-    ["Offset of field: tagINCHI_OutputStruct::stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, stereo0D) - 8usize];
-    ["Offset of field: tagINCHI_OutputStruct::num_atoms"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, num_atoms) - 16usize];
-    ["Offset of field: tagINCHI_OutputStruct::num_stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, num_stereo0D) - 18usize];
-    ["Offset of field: tagINCHI_OutputStruct::szMessage"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, szMessage) - 24usize];
-    ["Offset of field: tagINCHI_OutputStruct::szLog"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, szLog) - 32usize];
-    ["Offset of field: tagINCHI_OutputStruct::WarningFlags"]
-        [::std::mem::offset_of!(tagINCHI_OutputStruct, WarningFlags) - 40usize];
-};
 impl Default for tagINCHI_OutputStruct {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -443,30 +252,6 @@ pub struct tagINCHI_OutputStructEx {
     pub polymer: *mut inchi_Output_Polymer,
     pub v3000: *mut inchi_Output_V3000,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagINCHI_OutputStructEx"][::std::mem::size_of::<tagINCHI_OutputStructEx>() - 88usize];
-    ["Alignment of tagINCHI_OutputStructEx"]
-        [::std::mem::align_of::<tagINCHI_OutputStructEx>() - 8usize];
-    ["Offset of field: tagINCHI_OutputStructEx::atom"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, atom) - 0usize];
-    ["Offset of field: tagINCHI_OutputStructEx::stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, stereo0D) - 8usize];
-    ["Offset of field: tagINCHI_OutputStructEx::num_atoms"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, num_atoms) - 16usize];
-    ["Offset of field: tagINCHI_OutputStructEx::num_stereo0D"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, num_stereo0D) - 18usize];
-    ["Offset of field: tagINCHI_OutputStructEx::szMessage"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, szMessage) - 24usize];
-    ["Offset of field: tagINCHI_OutputStructEx::szLog"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, szLog) - 32usize];
-    ["Offset of field: tagINCHI_OutputStructEx::WarningFlags"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, WarningFlags) - 40usize];
-    ["Offset of field: tagINCHI_OutputStructEx::polymer"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, polymer) - 72usize];
-    ["Offset of field: tagINCHI_OutputStructEx::v3000"]
-        [::std::mem::offset_of!(tagINCHI_OutputStructEx, v3000) - 80usize];
-};
 impl Default for tagINCHI_OutputStructEx {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
@@ -563,17 +348,6 @@ pub struct tagInchiInpData {
     pub bChiral: ::std::os::raw::c_int,
     pub szErrMsg: [::std::os::raw::c_char; 256usize],
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of tagInchiInpData"][::std::mem::size_of::<tagInchiInpData>() - 272usize];
-    ["Alignment of tagInchiInpData"][::std::mem::align_of::<tagInchiInpData>() - 8usize];
-    ["Offset of field: tagInchiInpData::pInp"]
-        [::std::mem::offset_of!(tagInchiInpData, pInp) - 0usize];
-    ["Offset of field: tagInchiInpData::bChiral"]
-        [::std::mem::offset_of!(tagInchiInpData, bChiral) - 8usize];
-    ["Offset of field: tagInchiInpData::szErrMsg"]
-        [::std::mem::offset_of!(tagInchiInpData, szErrMsg) - 12usize];
-};
 impl Default for tagInchiInpData {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();

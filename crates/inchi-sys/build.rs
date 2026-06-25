@@ -190,7 +190,12 @@ fn regenerate_bindings(base: &Path) {
         .prepend_enum_name(false)
         .derive_default(true)
         .derive_debug(true)
-        .layout_tests(true)
+        // Layout tests bake in host-specific struct offsets/sizes, which are
+        // wrong on other ABIs (e.g. Windows MSVC, where `long` is 4 bytes, so
+        // `unsigned long` fields shift every following field). The committed
+        // bindings must compile on every target, so we omit them; the field
+        // types are already resolved per-target by Rust.
+        .layout_tests(false)
         .generate_comments(false)
         .generate()
         .expect("failed to generate InChI bindings");
