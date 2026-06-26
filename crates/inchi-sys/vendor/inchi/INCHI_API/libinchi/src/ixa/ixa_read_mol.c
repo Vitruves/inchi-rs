@@ -382,18 +382,19 @@ void INCHI_DECL IXA_MOL_ReadMolfile(IXA_STATUS_HANDLE hStatus,
                     {
                         goto exit_function;
                     }
-                    switch (bond_type)
+                    /* djb-rwth: fixing MSVC C5286 warning */
+                    switch ((short) bond_type)
                     {
-                        case INCHI_BOND_TYPE_SINGLE:
+                        case (short) INCHI_BOND_TYPE_SINGLE:
                             chem_bonds_valence += 1;
                             break;
-                        case INCHI_BOND_TYPE_DOUBLE:
+                        case (short) INCHI_BOND_TYPE_DOUBLE:
                             chem_bonds_valence += 2;
                             break;
-                        case INCHI_BOND_TYPE_TRIPLE:
+                        case (short) INCHI_BOND_TYPE_TRIPLE:
                             chem_bonds_valence += 3;
                             break;
-                        case INCHI_BOND_TYPE_ALTERN:
+                        case (short) INCHI_BOND_TYPE_ALTERN:
                             chem_bonds_valence += 1;
                             aromatic_count++;
                             break;

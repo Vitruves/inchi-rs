@@ -204,7 +204,7 @@ int FixRestoredStructureStereo( struct tagCANON_GLOBALS *pCG,
                 if (( pe->forbidden & forbidden_stereo_edge_mask ) &&
                     ( ret = AddToEdgeList( &FixedStereoEdges, e, INC_ADD_EDGE ) )) /* djb-rwth: ignoring LLVM warning as there should be no memory leak */
                 {
-                    inchi_free(pe); /* djb-rwth: avoiding memory leak */
+                    /* djb-rwth: fixing coverity ID #499482 */
                     goto exit_function;
                 }
             }
@@ -237,7 +237,7 @@ int FixRestoredStructureStereo( struct tagCANON_GLOBALS *pCG,
                 if (v2 == ( pe->neighbor12 ^ v1 ))
                     break; /* the edge has been found */
             }
-            if (k == at2[v1].valence)
+            if (k >= at2[v1].valence) /* djb-rwth: addressing LLVM warning */
             {
                 ret = RI_ERR_SYNTAX;
                 goto exit_function;
@@ -612,7 +612,7 @@ int FixRestoredStructureStereo( struct tagCANON_GLOBALS *pCG,
                 if (v2 == ( pe->neighbor12 ^ v1 ))
                     break; /* the edge has been found */
             }
-            if (k == at2[v1].valence)
+            if (k >= at2[v1].valence) /* djb-rwth: addressing LLVM warning */
             {
                 ret = RI_ERR_SYNTAX;
                 goto exit_function;
@@ -1348,7 +1348,7 @@ int FixRestoredStructureStereo( struct tagCANON_GLOBALS *pCG,
                 if (v2 == ( pe->neighbor12 ^ v1 ))
                     break; /* the edge has been found */
             }
-            if (k == at2[v1].valence)
+            if (k >= at2[v1].valence) /* djb-rwth: addressing LLVM warning */
             {
                 ret = RI_ERR_SYNTAX;
                 goto exit_function;

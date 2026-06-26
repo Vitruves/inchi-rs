@@ -769,18 +769,21 @@ int NormOneComponentINChI( CANON_GLOBALS *pCG,
         }
     }
 
-    cti->nUserMode = ip->nMode;
-    cti->bLooseTSACheck = ip->bLooseTSACheck;
-    cti->bStereoAtZz = ip->bStereoAtZz;
-
-    /* vABParityUnknown holds actual value of an internal constant signifying       */
-    /* unknown parity: either the same as for undefined parity (default==standard)  */
-    /*  or a specific one (non-std; requested by SLUUD switch).                     */
-    cti->vABParityUnknown = AB_PARITY_UNDF;
-    if (0 != ( ip->nMode & REQ_MODE_DIFF_UU_STEREO ))
+    if (cti) /* djb-rwth: fixing a NULL pointer dereference */
     {
-        /* Make labels for unknown and undefined stereo different */
-        cti->vABParityUnknown = AB_PARITY_UNKN;
+        cti->nUserMode = ip->nMode;
+        cti->bLooseTSACheck = ip->bLooseTSACheck;
+        cti->bStereoAtZz = ip->bStereoAtZz;
+
+        /* vABParityUnknown holds actual value of an internal constant signifying       */
+        /* unknown parity: either the same as for undefined parity (default==standard)  */
+        /*  or a specific one (non-std; requested by SLUUD switch).                     */
+        cti->vABParityUnknown = AB_PARITY_UNDF;
+        if (0 != (ip->nMode & REQ_MODE_DIFF_UU_STEREO))
+        {
+            /* Make labels for unknown and undefined stereo different */
+            cti->vABParityUnknown = AB_PARITY_UNKN;
+        }
     }
 
     if (inp_cur_data) /* djb-rwth: fixing a NULL pointer dereference */
@@ -1827,23 +1830,26 @@ int  Canonicalization_step( CANON_GLOBALS *pCG,
         /***************************************
            The last canonicalization step
          ***************************************/
-        if (pBCN)
+        if ((i >= 0) && (i < 2)) /* djb-rwth: fixing buffer overruns */
         {
-            /* USE_CANON2 == 1 */
-            pCS->NeighList = NULL;
-            pCS->pBCN = pBCN;
-            ret = Canon_INChI( ic, z->num_atoms,
-                               i ? z->num_at_tg : z->num_atoms,
-                               z->at[i], pCS, pCG, z->nMode, i ); /* djb-rwth: ui_rr */
-        }
-        else
-        {
-            /* old way */
-            pCS->NeighList = CreateNeighList( z->num_atoms, i ? z->num_at_tg : z->num_atoms, z->at[i], pCS->bDoubleBondSquare, pCS->t_group_info );
-            pCS->pBCN = NULL;
-            ret = Canon_INChI( ic, z->num_atoms,
-                               i ? z->num_at_tg : z->num_atoms,
-                               z->at[i], pCS, pCG, z->nMode, i );
+            if (pBCN)
+            {
+                /* USE_CANON2 == 1 */
+                pCS->NeighList = NULL;
+                pCS->pBCN = pBCN;
+                ret = Canon_INChI(ic, z->num_atoms,
+                    i ? z->num_at_tg : z->num_atoms,
+                    z->at[i], pCS, pCG, z->nMode, i);
+            }
+            else
+            {
+                /* old way */
+                pCS->NeighList = CreateNeighList(z->num_atoms, i ? z->num_at_tg : z->num_atoms, z->at[i], pCS->bDoubleBondSquare, pCS->t_group_info);
+                pCS->pBCN = NULL;
+                ret = Canon_INChI(ic, z->num_atoms,
+                    i ? z->num_at_tg : z->num_atoms,
+                    z->at[i], pCS, pCG, z->nMode, i);
+            }
         }
 
         pINChI = ppINChI[i];      /* pointers to already allocated still empty InChI */
@@ -2231,7 +2237,7 @@ int CreateCompAtomData( COMP_ATOM_DATA *inp_at_data,
     FreeCompAtomData( inp_at_data );
     if (( inp_at_data->at = CreateInpAtom( num_atoms ) ) &&
         ( num_components <= 1 || bIntermediateTaut ||
-        ( inp_at_data->nOffsetAtAndH = (AT_NUMB*) inchi_calloc( sizeof( inp_at_data->nOffsetAtAndH[0] ), 2 * ( (long long)num_components + 1 ) ) ) )) /* djb-rwth: cast operator added */
+        ( inp_at_data->nOffsetAtAndH = (AT_NUMB*) inchi_calloc( 2 * ( (long long)num_components + 1 ), sizeof( inp_at_data->nOffsetAtAndH[0] ) ) ) )) /* djb-rwth: cast operator added */
     {
 
         inp_at_data->num_at = num_atoms;
@@ -2551,7 +2557,7 @@ int FillOutINChIReducedWarn( INChI *pINChI,
             /*  Num(H), Num(-) */
             for (j = 0; j < INCHI_T_NUM_MOVABLE; j++) /* djb-rwth: removing redundant code */
                 pINChI->nTautomer[len++] = t_group->num[j];
-            for (j = T_NUM_NO_ISOTOPIC; j < INCHI_T_NUM_MOVABLE; j++) /* djb-rwth: redundant code as the loop is never executed -- discussion required */ /* djb-rwth: ui_rr */
+            for (j = T_NUM_NO_ISOTOPIC; j < INCHI_T_NUM_MOVABLE; j++) /* djb-rwth: redundant code as the loop is never executed -- discussion required */ /* djb-rwth: unresolved issue -- revision required */
                 pINChI->nTautomer[len++] = 0; /* should not happen */
             /* tautomeric group endpoint canonical numbers, pre-sorted in ascending order */
             for (j = (int) t_group->nFirstEndpointAtNoPos,

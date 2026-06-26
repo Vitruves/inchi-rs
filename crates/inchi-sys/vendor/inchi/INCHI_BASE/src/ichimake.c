@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <locale.h>
 
 #include "mode.h"
 #include "ichimake.h"
@@ -57,74 +58,76 @@
     Local functions
 */
 
-int inp2spATOM( inp_ATOM *inp_at, int num_inp_at, sp_ATOM *at );
-int GetElementAndCount( const char **f, char *szEl, int *count );
-int CompareHillFormulas( const char *f1, const char *f2 );
-int CompareInchiStereo( INChI_Stereo *Stereo1,
-                        INCHI_MODE nFlags1,
-                        INChI_Stereo *Stereo2,
-                        INCHI_MODE nFlags2 );
-int CompareReversedStereoINChI( INChI_Stereo *s1,
-                                INChI_Stereo *s2 );
-int GetAtomOrdNbrInCanonOrd( struct tagCANON_GLOBALS *pCG,
-                             inp_ATOM *norm_at,
-                             AT_NUMB *nAtomOrdNbr,
-                             AT_NUMB *nOrigAtNosInCanonOrd,
-                             int num_at );
-int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
-                         inp_ATOM *norm_at,
-                         INF_ATOM_DATA *inf_norm_at_data,
-                         int init_num_at,
-                         int bIsotopic,
-                         INChI *pINChI,
-                         INChI_Aux *pINChI_Aux,
-                         int bAbcNumbers,
-                         INCHI_MODE nMode );
-int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
-                            inp_ATOM *inp_norm_at,
-                            INF_ATOM_DATA *inf_norm_at_data,
-                            AT_NUMB *pStereoFlags,
-                            int init_num_at,
-                            int offset,
-                            int offset_H,
-                            int bIsotopic,
-                            INChI *pINChI,
-                            INChI_Aux *pINChI_Aux,
-                            int bAbcNumbers,
-                            INCHI_MODE nMode );
-int FillOutInputInfAtom( inp_ATOM *inp_at,
-                         INF_ATOM_DATA *inf_at_data,
-                         int init_num_at,
-                         int num_removed_H,
-                         int bAdd_DT_to_num_H,
-                         int nNumRemovedProtons,
-                         NUM_H *nNumRemovedProtonsIsotopic,
-                         int bIsotopic,
-                         int bAbcNumbers );
-int CheckCanonNumberingCorrectness( int num_atoms,
-                                    int num_at_tg,
-                                    sp_ATOM *at,
-                                    CANON_STAT *pCS,
-                                    CANON_GLOBALS *pCG,
-                                    int bTautomeric,
-                                    char *pStrErrStruct );
-static int CompareDfsDescendants4CT( const void *a1, const void *a2, void* );
-int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo );
+int inp2spATOM(inp_ATOM* inp_at, int num_inp_at, sp_ATOM* at);
+int GetElementAndCount(const char** f, char* szEl, int* count);
+int CompareHillFormulas(const char* f1, const char* f2);
+int CompareInchiStereo(INChI_Stereo* Stereo1,
+    INCHI_MODE nFlags1,
+    INChI_Stereo* Stereo2,
+    INCHI_MODE nFlags2);
+int CompareReversedStereoINChI(INChI_Stereo* s1,
+    INChI_Stereo* s2);
+int GetAtomOrdNbrInCanonOrd(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* norm_at,
+    AT_NUMB* nAtomOrdNbr,
+    AT_NUMB* nOrigAtNosInCanonOrd,
+    int num_at);
+int FillOutCanonInfAtom(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* norm_at,
+    INF_ATOM_DATA* inf_norm_at_data,
+    int init_num_at,
+    int bIsotopic,
+    INChI* pINChI,
+    INChI_Aux* pINChI_Aux,
+    int bAbcNumbers,
+    INCHI_MODE nMode);
+int FillOutOneCanonInfAtom(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* inp_norm_at,
+    INF_ATOM_DATA* inf_norm_at_data,
+    AT_NUMB* pStereoFlags,
+    int init_num_at,
+    int offset,
+    int offset_H,
+    int bIsotopic,
+    INChI* pINChI,
+    INChI_Aux* pINChI_Aux,
+    int bAbcNumbers,
+    INCHI_MODE nMode);
+int FillOutInputInfAtom(inp_ATOM* inp_at,
+    INF_ATOM_DATA* inf_at_data,
+    int init_num_at,
+    int num_removed_H,
+    int bAdd_DT_to_num_H,
+    int nNumRemovedProtons,
+    NUM_H* nNumRemovedProtonsIsotopic,
+    int bIsotopic,
+    int bAbcNumbers);
+int CheckCanonNumberingCorrectness(int num_atoms,
+    int num_at_tg,
+    sp_ATOM* at,
+    CANON_STAT* pCS,
+    CANON_GLOBALS* pCG,
+    int bTautomeric,
+    char* pStrErrStruct);
+static int CompareDfsDescendants4CT(const void* a1, const void* a2, void*);
+int GetSp3RelRacAbs(const INChI* pINChI, INChI_Stereo* Stereo);
 #if ( READ_INCHI_STRING == 1 ) /*  { */
-int CompareReversedStereoINChI2( INChI_Stereo *s1, INChI_Stereo *s2, ICR *picr );
+int CompareReversedStereoINChI2(INChI_Stereo* s1, INChI_Stereo* s2, ICR* picr);
 #endif
 
 /****************************************************************************/
-int inp2spATOM( inp_ATOM *inp_at, int num_inp_at, sp_ATOM *at )
+int inp2spATOM(inp_ATOM* inp_at, int num_inp_at, sp_ATOM* at)
 {
-    int i, j, val;
+    int i, j, val, elname_len;
 
-    memset( at, 0, sizeof( at[0] )*num_inp_at ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(at, 0, sizeof(at[0]) * num_inp_at); /* djb-rwth: memset_s C11/Annex K variant? */
 
     for (i = 0; i < num_inp_at; i++)
     {
-        strncpy(at[i].elname, inp_at[i].elname, sizeof(at[0].elname));
-        at[i].el_number = (U_CHAR) get_periodic_table_number( at[i].elname );
+        elname_len = sizeof(at[0].elname) - 1; /* djb-rwth: fixing coverity ID #499609 */
+        strncpy(at[i].elname, inp_at[i].elname, elname_len);
+        at[i].elname[elname_len] = '\0';
+        at[i].el_number = (U_CHAR)get_periodic_table_number(at[i].elname);
         val = at[i].valence = inp_at[i].valence;
         for (j = 0; j < val; j++)
         {
@@ -155,11 +158,11 @@ int inp2spATOM( inp_ATOM *inp_at, int num_inp_at, sp_ATOM *at )
 #endif
 #endif
 
-/*
-        at[i].x                  = inp_at[i].x;
-        at[i].y                  = inp_at[i].y;
-        at[i].z                  = inp_at[i].z;
-*/
+        /*
+                at[i].x                  = inp_at[i].x;
+                at[i].y                  = inp_at[i].y;
+                at[i].z                  = inp_at[i].z;
+        */
     }
 
     return 0;
@@ -167,19 +170,19 @@ int inp2spATOM( inp_ATOM *inp_at, int num_inp_at, sp_ATOM *at )
 
 
 /****************************************************************************/
-int GetElementAndCount( const char **f, char *szEl, int *count )
+int GetElementAndCount(const char** f, char* szEl, int* count)
 {
-    const char *p = *f;
-    char       *q;
+    const char* p = *f;
+    char* q;
     int   i = 0;
 
     /* djb-rwth: fixing oss-fuzz issue #37224 */
     if (p && *p)
     {
-        if (isupper( UCINT *p ))
+        if (isupper(UCINT * p))
         {
             szEl[i++] = *p++;
-            if (*p && islower( UCINT *p ))
+            if (*p && islower(UCINT * p))
             {
                 szEl[i++] = *p++;
             }
@@ -187,11 +190,11 @@ int GetElementAndCount( const char **f, char *szEl, int *count )
             if (1 == i && szEl[0] == 'C')
             {
                 szEl[0] = 'A'; /*  less than any element: */
-                               /*  carbon-containing compounds should be first */
+                /*  carbon-containing compounds should be first */
             }
-            if (*p && isdigit( UCINT *p ))
+            if (*p && isdigit(UCINT * p))
             {
-                *count = strtol( p, &q, 10 );
+                *count = strtol(p, &q, 10);
                 p = q;
             }
             else
@@ -235,18 +238,18 @@ int GetElementAndCount( const char **f, char *szEl, int *count )
 
 
 /****************************************************************************/
-int CompareHillFormulas( const char *f1, const char *f2 )
+int CompareHillFormulas(const char* f1, const char* f2)
 {
     char szEl1[4], szEl2[4];
     int  count1, count2, ret1, ret2, ret;
 
     do
     {
-        ret1 = GetElementAndCount( &f1, szEl1, &count1 );
-        ret2 = GetElementAndCount( &f2, szEl2, &count2 );
+        ret1 = GetElementAndCount(&f1, szEl1, &count1);
+        ret2 = GetElementAndCount(&f2, szEl2, &count2);
         if (0 <= ret1 && 0 <= ret2)
         {
-            if ((ret = strcmp( szEl1, szEl2 ))) /* djb-rwth: addressing LLVM warning */
+            if ((ret = strcmp(szEl1, szEl2))) /* djb-rwth: addressing LLVM warning */
             {
                 return ret; /*  lexicographic order, string termination > any character */
             }
@@ -259,39 +262,38 @@ int CompareHillFormulas( const char *f1, const char *f2 )
         {
             return 0; /*  program error <BRKPT> */
         }
-    }
-    while (0 < ret1 && 0 < ret2);
+    } while (0 < ret1 && 0 < ret2);
 
     return 0;
 }
 
 
 /****************************************************************************/
-int CompareHillFormulasNoH( const char *f1,
-                            const char *f2,
-                            int *num_H1,
-                            int *num_H2 )
+int CompareHillFormulasNoH(const char* f1,
+    const char* f2,
+    int* num_H1,
+    int* num_H2)
 {
     char szEl1[4], szEl2[4];
     int  count1, count2, ret1, ret2, ret;
 
     do
     {
-        ret1 = GetElementAndCount( &f1, szEl1, &count1 );
+        ret1 = GetElementAndCount(&f1, szEl1, &count1);
         if (0 < ret1 && szEl1[0] == 'H' && !szEl1[1])
         {
             *num_H1 += count1;
-            ret1 = GetElementAndCount( &f1, szEl1, &count1 );
+            ret1 = GetElementAndCount(&f1, szEl1, &count1);
         }
-        ret2 = GetElementAndCount( &f2, szEl2, &count2 );
+        ret2 = GetElementAndCount(&f2, szEl2, &count2);
         if (0 < ret2 && szEl2[0] == 'H' && !szEl2[1])
         {
             *num_H2 += count2;
-            ret2 = GetElementAndCount( &f2, szEl2, &count2 );
+            ret2 = GetElementAndCount(&f2, szEl2, &count2);
         }
         if (0 <= ret1 && 0 <= ret2)
         {
-            if ((ret = strcmp( szEl1, szEl2 ))) /* djb-rwth: addressing LLVM warning */
+            if ((ret = strcmp(szEl1, szEl2))) /* djb-rwth: addressing LLVM warning */
             {
                 return ret; /*  lexicographic order, string termination > any character */
             }
@@ -304,15 +306,14 @@ int CompareHillFormulasNoH( const char *f1,
         {
             return 0; /*  program error <BRKPT> */
         }
-    }
-    while (0 < ret1 && 0 < ret2);
+    } while (0 < ret1 && 0 < ret2);
 
     return 0;
 }
 
 
 /****************************************************************************/
-int CompareTautNonIsoPartOfINChI( const INChI *i1, const INChI *i2 )
+int CompareTautNonIsoPartOfINChI(const INChI* i1, const INChI* i2)
 {
     int len1, len2, ret, i;
 
@@ -324,7 +325,7 @@ int CompareTautNonIsoPartOfINChI( const INChI *i1, const INChI *i2 )
     }
     for (i = 0; i < len1; i++)
     {
-        if ((ret = (int) i2->nTautomer[i] - (int) i1->nTautomer[i])) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)i2->nTautomer[i] - (int)i1->nTautomer[i])) /* djb-rwth: addressing LLVM warning */
             return ret;
     }
     return 0;
@@ -337,24 +338,24 @@ int CompareTautNonIsoPartOfINChI( const INChI *i1, const INChI *i2 )
     Sorting in descending order:
         return -1 if *p1 > *p2, return +1 if *p1 < *p2
 ****************************************************************************/
-int CompINChITautVsNonTaut( const INCHI_SORT *p1,
-                            const INCHI_SORT *p2,
-                            int bCompareIsotopic )
+int CompINChITautVsNonTaut(const INCHI_SORT* p1,
+    const INCHI_SORT* p2,
+    int bCompareIsotopic)
 {
     int ret, num, i, num_H1, num_H2;
 
-    const INChI *i1 = NULL; /* Mobile-H layers in Mobile-H sorting order */
-    const INChI *i2 = NULL; /* Fixed-H  layers in Fixed-H  sorting order */
+    const INChI* i1 = NULL; /* Mobile-H layers in Mobile-H sorting order */
+    const INChI* i2 = NULL; /* Fixed-H  layers in Fixed-H  sorting order */
 
     int   n1;               /* TAUT_YES if tautomeric i1 exists, otherwise TAUT_NON */
 
     /* INChI_Stereo *Stereo1, *Stereo2; */
 
-    n1 = ( p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms ) ? TAUT_YES : TAUT_NON;
+    n1 = (p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms) ? TAUT_YES : TAUT_NON;
 
     i1 = p1->pINChI[n1];
-    i2 = ( n1 == TAUT_YES && p2->pINChI[TAUT_NON] &&
-           p2->pINChI[TAUT_NON]->nNumberOfAtoms ) ? p2->pINChI[TAUT_NON] : (const INChI *) NULL;
+    i2 = (n1 == TAUT_YES && p2->pINChI[TAUT_NON] &&
+        p2->pINChI[TAUT_NON]->nNumberOfAtoms) ? p2->pINChI[TAUT_NON] : (const INChI*)NULL;
 
     /* non-deleted-non-empty < deleted < empty */
     if (i1 && !i2)
@@ -376,7 +377,7 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
     num_H1 = num_H2 = 0;
 
     /* do not compare terminal H */
-    if ((ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = CompareHillFormulasNoH(i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2))) /* djb-rwth: addressing LLVM warning */
     {
         return ret;  /* lexicographic order except the shorter one is greater (last): CH2O < CH2; C3XX < C2XX */
     }
@@ -393,7 +394,7 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
     num = i1->nNumberOfAtoms;
     for (i = 0; i < num; i++)
     { /* should always be equal if Hill formulas are same */
-        if ((ret = (int) i2->nAtom[i] - (int) i1->nAtom[i])) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)i2->nAtom[i] - (int)i1->nAtom[i])) /* djb-rwth: addressing LLVM warning */
             return ret; /* greater periodic number first */
     }
     /*
@@ -404,7 +405,7 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
     num = i2->lenConnTable;
     for (i = 0; i < num; i++)
     {
-        if ((ret = (int) i2->nConnTable[i] - (int) i1->nConnTable[i])) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i])) /* djb-rwth: addressing LLVM warning */
             return ret; /* greater connection table first */
     }
     /*
@@ -422,13 +423,13 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
         {
             return !i2->nNum_H[i] ? 1 :  /* no H first */
                 !i1->nNum_H[i] ? -1 :
-                (int) i2->nNum_H[i] - (int) i1->nNum_H[i];
+                (int)i2->nNum_H[i] - (int)i1->nNum_H[i];
         }
     }
     /*
         compare non-isotopic tautomeric part
     */
-    if ((ret = CompareTautNonIsoPartOfINChI( i1, i2 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = CompareTautNonIsoPartOfINChI(i1, i2))) /* djb-rwth: addressing LLVM warning */
     {
         return ret;
     }
@@ -447,10 +448,10 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
         or non-tautomeric
      */
 
-    /*
-        non-tautomeric "fixed H" specific
-    */
-    if ( /*TAUT_NON == bTaut &&*/ ( i2 && i2->nNum_H_fixed ))
+     /*
+         non-tautomeric "fixed H" specific
+     */
+    if ( /*TAUT_NON == bTaut && (i2 &&*/ i2->nNum_H_fixed) /* djb-rwth: fixing coverity ID #499493 */
     {
         /* first, compare non-tautomeric chem. formulas -- they may be different */
         /* secondly, compare fixed-H distribution */
@@ -469,7 +470,7 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
     /*
         compare non-isotopic stereo
     */
-    ret = CompareInchiStereo( i1->Stereo, i1->nFlags, i2->Stereo, i2->nFlags );
+    ret = CompareInchiStereo(i1->Stereo, i1->nFlags, i2->Stereo, i2->nFlags);
     if (ret)
     {
         return ret;
@@ -502,9 +503,9 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
         /*  compare isotopic atoms */
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) i2->IsotopicAtom[i].nAtomNumber - (int) i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
                 return ret;
-            if ((ret = (int) i2->IsotopicAtom[i].nIsoDifference - (int) i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
                 return ret;
         }
 
@@ -512,11 +513,11 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
         /* if tautomeric comparison mode then here are compared only non-tautomeric H */
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_T - (int) i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
                 return ret;
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_D - (int) i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
                 return ret;
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_H - (int) i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
                 return ret;
         }
 
@@ -539,8 +540,8 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
         */
 
         /* compare isotopic stereo */
-        ret = CompareInchiStereo( i1->StereoIsotopic, i1->nFlags,
-                                  i2->StereoIsotopic, i2->nFlags );
+        ret = CompareInchiStereo(i1->StereoIsotopic, i1->nFlags,
+            i2->StereoIsotopic, i2->nFlags);
         if (ret)
         {
             return ret;
@@ -555,10 +556,10 @@ int CompINChITautVsNonTaut( const INCHI_SORT *p1,
     if (i2->nTotalCharge && i1->nTotalCharge)
     {
         /*  both are charged; smaller charges first */
-        ret = (int) i1->nTotalCharge - (int) i2->nTotalCharge;
+        ret = (int)i1->nTotalCharge - (int)i2->nTotalCharge;
         return ret;
     }
-    if ((ret = ( i1->nTotalCharge ? 1 : 0 ) - ( i2->nTotalCharge ? 1 : 0 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = (i1->nTotalCharge ? 1 : 0) - (i2->nTotalCharge ? 1 : 0))) /* djb-rwth: addressing LLVM warning */
     {
         /*  only one is charged; uncharged first */
         return ret;
@@ -583,13 +584,13 @@ typedef enum tagSp3StereoTypeTmp
     SP3_ABS = 2,  /* abs stereo: both /m and /s are present */
     SP3_REL = 4,  /* rel stereo: /s is present, /m is not */
     SP3_RAC = 8,  /* racemic stereo: /s is presen, /m is nott */
-    SP3_TYPE = ( SP3_ABS | SP3_REL | SP3_RAC ),          /* bitmap for checking the presence of /m */
-    SP3_ANY = ( SP3_ABS | SP3_REL | SP3_RAC | SP3_ONLY )  /* bitmap for checking the presence of /t */
+    SP3_TYPE = (SP3_ABS | SP3_REL | SP3_RAC),          /* bitmap for checking the presence of /m */
+    SP3_ANY = (SP3_ABS | SP3_REL | SP3_RAC | SP3_ONLY)  /* bitmap for checking the presence of /t */
 } SP3_TYPE_TMP;
 
 
 /****************************************************************************/
-int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo )
+int GetSp3RelRacAbs(const INChI* pINChI, INChI_Stereo* Stereo)
 {
     int nRet = SP3_NONE;
     if (pINChI && !pINChI->bDeleted && Stereo && 0 < Stereo->nNumberOfStereoCenters)
@@ -626,7 +627,7 @@ int GetSp3RelRacAbs( const INChI *pINChI, INChI_Stereo *Stereo )
         }
         else
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
-            if (!( ( pINChI->nFlags & ( INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO ) ) && 1 == Stereo->nNumberOfStereoCenters ))
+            if (!((pINChI->nFlags & (INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO)) && 1 == Stereo->nNumberOfStereoCenters))
 #endif
             {
                 nRet = SP3_ONLY; /*  SP3_NONE if relative stereo and 1 stereocenter */
@@ -641,31 +642,31 @@ CompINChILayers( ... )
 
  Sorting in descending order: return -1 if *p1 > *p2, return +1 if *p1 < *p2
 ****************************************************************************/
-int CompINChILayers( const INCHI_SORT *p1,
-                     const INCHI_SORT *p2,
-                     char sDifSegs[][DIFS_LENGTH],
-                     int bFixTranspChargeBug )
+int CompINChILayers(const INCHI_SORT* p1,
+    const INCHI_SORT* p2,
+    char sDifSegs[][DIFS_LENGTH],
+    int bFixTranspChargeBug)
 {
     int ret = 0, num, i, num_H1, num_H2;
 
-    const INChI *i1 = NULL; /* Mobile-H layers in Mobile-H sorting order */
-    const INChI *i2 = NULL; /* Fixed-H  layers in Fixed-H  sorting order */
+    const INChI* i1 = NULL; /* Mobile-H layers in Mobile-H sorting order */
+    const INChI* i2 = NULL; /* Fixed-H  layers in Fixed-H  sorting order */
 
     int   n1;               /* TAUT_YES if tautomeric i1 exists, otherwise TAUT_NON */
 
-    INChI_Stereo *Stereo1, *Stereo2;
-    INChI_Stereo *IsoStereo1, *IsoStereo2;
+    INChI_Stereo* Stereo1, * Stereo2;
+    INChI_Stereo* IsoStereo1, * IsoStereo2;
     int bRelRac[DIFL_LENGTH];
-    char *psDifSegs;
+    char* psDifSegs;
 
-    n1 = ( p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms ) ? TAUT_YES : TAUT_NON;
+    n1 = (p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms) ? TAUT_YES : TAUT_NON;
 
     i1 = p1->pINChI[n1];
-    i2 = ( n1 == TAUT_YES && p2->pINChI[TAUT_NON] &&
-           p2->pINChI[TAUT_NON]->nNumberOfAtoms ) ? p2->pINChI[TAUT_NON] : (const INChI *) NULL;
+    i2 = (n1 == TAUT_YES && p2->pINChI[TAUT_NON] &&
+        p2->pINChI[TAUT_NON]->nNumberOfAtoms) ? p2->pINChI[TAUT_NON] : (const INChI*)NULL;
 
     num_H1 = num_H2 = 0;
-    memset( bRelRac, DIFV_BOTH_EMPTY, sizeof( bRelRac ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(bRelRac, DIFV_BOTH_EMPTY, sizeof(bRelRac)); /* djb-rwth: memset_s C11/Annex K variant? */
     /*=====================*/
     /*====     /f    ======*/
     /*=====================*/
@@ -674,8 +675,8 @@ int CompINChILayers( const INCHI_SORT *p1,
         sDifSegs[DIFL_M][DIFS_f_FORMULA] |= DIFV_NEQ2PRECED;
         if (i2 && !i2->bDeleted && i2->szHillFormula && i2->szHillFormula[0])
         {
-            if (!CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 ) &&
-                  num_H1 == num_H2)
+            if (!CompareHillFormulasNoH(i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2) &&
+                num_H1 == num_H2)
             {
                 sDifSegs[DIFL_F][DIFS_f_FORMULA] |= DIFV_EQL2PRECED;
             }
@@ -718,7 +719,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     /* M: H atoms */
     if (i1 && !i1->bDeleted)
     {
-        num_H1 = ( i1->lenTautomer > 0 && i1->nTautomer && i1->nTautomer[0] ) ? 1 : 0; /* number of t-groups */
+        num_H1 = (i1->lenTautomer > 0 && i1->nTautomer && i1->nTautomer[0]) ? 1 : 0; /* number of t-groups */
         if (!num_H1 && i1->nNum_H)
         {
             for (i = 0; i < i1->nNumberOfAtoms; i++)
@@ -831,7 +832,7 @@ int CompINChILayers( const INCHI_SORT *p1,
 
                     /* Fixed-H i2 is empty because Fixed-H struct is same as Mobile-H */
                     if (p1->ord_number != p2->ord_number && /* component order in Fixed-H is different from Mobile-H */
-                         n1 == TAUT_YES && p2->pINChI[TAUT_YES] && !p2->pINChI[TAUT_YES]->bDeleted &&
+                        n1 == TAUT_YES && p2->pINChI[TAUT_YES] && !p2->pINChI[TAUT_YES]->bDeleted &&
                         p2->pINChI[TAUT_YES]->nNumberOfAtoms)
                     {
                         int i2_nTotalCharge = p2->pINChI[TAUT_YES]->nTotalCharge;
@@ -942,7 +943,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     {
         if (Stereo1 && Stereo1->nNumberOfStereoBonds)
         {
-            if (Eql_INChI_Stereo( Stereo1, EQL_SP2, Stereo2, EQL_SP2, 0 ))
+            if (Eql_INChI_Stereo(Stereo1, EQL_SP2, Stereo2, EQL_SP2, 0))
             {
                 *psDifSegs |= DIFV_EQL2PRECED;
             }
@@ -972,7 +973,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_MI][DIFS_b_SBONDS];
     if (IsoStereo1 && IsoStereo1->nNumberOfStereoBonds)
     {
-        if (Eql_INChI_Stereo( IsoStereo1, EQL_SP2, Stereo1, EQL_SP2, 0 ))
+        if (Eql_INChI_Stereo(IsoStereo1, EQL_SP2, Stereo1, EQL_SP2, 0))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -997,15 +998,15 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_FI][DIFS_b_SBONDS];
     if (IsoStereo2 && IsoStereo2->nNumberOfStereoBonds)
     {
-        if (Eql_INChI_Stereo( IsoStereo2, EQL_SP2, Stereo2, EQL_SP2, 0 ))
+        if (Eql_INChI_Stereo(IsoStereo2, EQL_SP2, Stereo2, EQL_SP2, 0))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
         else
         {
-            if (!( Stereo1 && Stereo1->nNumberOfStereoBonds ) &&
-                 !( Stereo2 && Stereo2->nNumberOfStereoBonds ) &&
-                 Eql_INChI_Stereo( IsoStereo2, EQL_SP2, IsoStereo1, EQL_SP2, 0 ))
+            if (!(Stereo1 && Stereo1->nNumberOfStereoBonds) &&
+                !(Stereo2 && Stereo2->nNumberOfStereoBonds) &&
+                Eql_INChI_Stereo(IsoStereo2, EQL_SP2, IsoStereo1, EQL_SP2, 0))
             {
                 *psDifSegs |= DIFV_FI_EQ_MI;
             }
@@ -1017,36 +1018,36 @@ int CompINChILayers( const INCHI_SORT *p1,
     }
     else
     {
-     /* the solution table for FI stereo,
-        in case of FI stereo is empty
-        E = segment is empty, NE = not empty
-        +==============================+
-        | M   | MI  | F   |  result    |
-        +=====+=====+=====+============+
-        | E   | E   | E   | both empty |
-        +-----+-----+-----+------------+
-        | NE  | E   | E   | both empty |
-        +-----+-----+-----+------------+
-        | E   | NE  | E   | is empty   |
-        +-----+-----+-----+------------+
-        | NE  | NE  | E   | both empty |
-        +-----+-----+-----+------------+
-        | E   | E   | NE  | is empty   |
-        +-----+-----+-----+------------+
-        | NE  | E   | NE  | is empty   |
-        +-----+-----+-----+------------+
-        | E   | NE  | NE  | is empty   |
-        +-----+-----+-----+------------+
-        | NE  | NE  | ME  | is empty   |
-        +==============================+
-     */
-        if (Stereo2    && Stereo2->nNumberOfStereoBonds)
+        /* the solution table for FI stereo,
+           in case of FI stereo is empty
+           E = segment is empty, NE = not empty
+           +==============================+
+           | M   | MI  | F   |  result    |
+           +=====+=====+=====+============+
+           | E   | E   | E   | both empty |
+           +-----+-----+-----+------------+
+           | NE  | E   | E   | both empty |
+           +-----+-----+-----+------------+
+           | E   | NE  | E   | is empty   |
+           +-----+-----+-----+------------+
+           | NE  | NE  | E   | both empty |
+           +-----+-----+-----+------------+
+           | E   | E   | NE  | is empty   |
+           +-----+-----+-----+------------+
+           | NE  | E   | NE  | is empty   |
+           +-----+-----+-----+------------+
+           | E   | NE  | NE  | is empty   |
+           +-----+-----+-----+------------+
+           | NE  | NE  | ME  | is empty   |
+           +==============================+
+        */
+        if (Stereo2 && Stereo2->nNumberOfStereoBonds)
         {
             *psDifSegs |= DIFV_EQL2PRECED; /* isotopic is missing because there is no isotopes */
         }
         else
             if (IsoStereo1 && IsoStereo1->nNumberOfStereoBonds &&
-                 !( Stereo1 && Stereo1->nNumberOfStereoBonds )
+                !(Stereo1 && Stereo1->nNumberOfStereoBonds)
                 )
             {
                 *psDifSegs |= i2 ? DIFV_IS_EMPTY : DIFV_EQL2PRECED;
@@ -1061,15 +1062,15 @@ int CompINChILayers( const INCHI_SORT *p1,
     /*====     /t, /m, /s for M   ======*/
     /*==================================*/
     /* M sp3 stereo */
-    bRelRac[DIFL_M] = GetSp3RelRacAbs( i1, Stereo1 );       /* Mobile-H */
-    bRelRac[DIFL_MI] = GetSp3RelRacAbs( i1, IsoStereo1 );
-    bRelRac[DIFL_F] = GetSp3RelRacAbs( i2, Stereo2 );       /* Fixed-H */
-    bRelRac[DIFL_FI] = GetSp3RelRacAbs( i2, IsoStereo2 );
+    bRelRac[DIFL_M] = GetSp3RelRacAbs(i1, Stereo1);       /* Mobile-H */
+    bRelRac[DIFL_MI] = GetSp3RelRacAbs(i1, IsoStereo1);
+    bRelRac[DIFL_F] = GetSp3RelRacAbs(i2, Stereo2);       /* Fixed-H */
+    bRelRac[DIFL_FI] = GetSp3RelRacAbs(i2, IsoStereo2);
     if (SP3_NONE != bRelRac[DIFL_M])
     {
-        sDifSegs[DIFL_M][DIFS_t_SATOMS] |= ( bRelRac[DIFL_M] & SP3_ANY ) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
-        sDifSegs[DIFL_M][DIFS_m_SP3INV] |= ( bRelRac[DIFL_M] & SP3_ABS ) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
-        sDifSegs[DIFL_M][DIFS_s_STYPE] |= ( bRelRac[DIFL_M] & SP3_TYPE ) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
+        sDifSegs[DIFL_M][DIFS_t_SATOMS] |= (bRelRac[DIFL_M] & SP3_ANY) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
+        sDifSegs[DIFL_M][DIFS_m_SP3INV] |= (bRelRac[DIFL_M] & SP3_ABS) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
+        sDifSegs[DIFL_M][DIFS_s_STYPE] |= (bRelRac[DIFL_M] & SP3_TYPE) ? DIFV_NEQ2PRECED : DIFV_BOTH_EMPTY;
     }
     else
     {
@@ -1085,7 +1086,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_F][DIFS_t_SATOMS];
     if (SP3_ANY & bRelRac[DIFL_F])
     {
-        if (Eql_INChI_Stereo( Stereo2, EQL_SP3, Stereo1, EQL_SP3, 0 ))
+        if (Eql_INChI_Stereo(Stereo2, EQL_SP3, Stereo1, EQL_SP3, 0))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -1110,7 +1111,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_MI][DIFS_t_SATOMS];
     if (SP3_ANY & bRelRac[DIFL_MI])
     {
-        if (Eql_INChI_Stereo( IsoStereo1, EQL_SP3, Stereo1, EQL_SP3, 0 ))
+        if (Eql_INChI_Stereo(IsoStereo1, EQL_SP3, Stereo1, EQL_SP3, 0))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -1135,15 +1136,15 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_FI][DIFS_t_SATOMS];
     if (SP3_ANY & bRelRac[DIFL_FI])
     {
-        if (Eql_INChI_Stereo( IsoStereo2, EQL_SP3, Stereo2, EQL_SP3, 0 ))
+        if (Eql_INChI_Stereo(IsoStereo2, EQL_SP3, Stereo2, EQL_SP3, 0))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
         else
         {
-            if (!( SP3_ANY & bRelRac[DIFL_M] ) &&
-            !( SP3_ANY & bRelRac[DIFL_F] ) &&
-            Eql_INChI_Stereo( IsoStereo2, EQL_SP3, IsoStereo1, EQL_SP3, 0 ))
+            if (!(SP3_ANY & bRelRac[DIFL_M]) &&
+                !(SP3_ANY & bRelRac[DIFL_F]) &&
+                Eql_INChI_Stereo(IsoStereo2, EQL_SP3, IsoStereo1, EQL_SP3, 0))
             {
                 *psDifSegs |= DIFV_FI_EQ_MI;
             }
@@ -1154,13 +1155,13 @@ int CompINChILayers( const INCHI_SORT *p1,
         }
     }
     else /* similar to /b */
-        if (( SP3_ANY & bRelRac[DIFL_F] ))
+        if ((SP3_ANY & bRelRac[DIFL_F]))
         {
             *psDifSegs |= DIFV_EQL2PRECED; /* isotopic is missing because there is no isotopes */
         }
         else
         {
-            if (( SP3_ANY & bRelRac[DIFL_MI] ) && !( SP3_ANY & bRelRac[DIFL_M] ))
+            if ((SP3_ANY & bRelRac[DIFL_MI]) && !(SP3_ANY & bRelRac[DIFL_M]))
             {
                 *psDifSegs |= i2 ? DIFV_IS_EMPTY : DIFV_EQL2PRECED;
             }
@@ -1170,15 +1171,15 @@ int CompINChILayers( const INCHI_SORT *p1,
             }
         }
 
-        /*=====================*/
-        /*====     /m    ======*/
-        /*=====================*/
-        /* F sp3 abs stereo inversion */
+    /*=====================*/
+    /*====     /m    ======*/
+    /*=====================*/
+    /* F sp3 abs stereo inversion */
     psDifSegs = &sDifSegs[DIFL_F][DIFS_m_SP3INV];
-    if ((bRelRac[DIFL_F] & SP3_ABS) && Stereo1 && Stereo2) /* djb-rwth: fixing a NULL pointer dereference */
+    if (bRelRac[DIFL_F] & SP3_ABS)
     {
         /* the order of || operands below is critically important: || is not a commutative operation */
-        if (!( bRelRac[DIFL_M] & SP3_ABS ) || Stereo2->nCompInv2Abs != Stereo1->nCompInv2Abs)
+        if (!(bRelRac[DIFL_M] & SP3_ABS) || Stereo2->nCompInv2Abs != Stereo1->nCompInv2Abs)
         {
             *psDifSegs |= DIFV_NEQ2PRECED;
         }
@@ -1201,9 +1202,9 @@ int CompINChILayers( const INCHI_SORT *p1,
 
     /* MI sp3 abs stereo inversion */
     psDifSegs = &sDifSegs[DIFL_MI][DIFS_m_SP3INV];
-    if ((SP3_ABS & bRelRac[DIFL_MI]) && Stereo1) /* djb-rwth: fixing a NULL pointer dereference */
+    if (SP3_ABS & bRelRac[DIFL_MI])
     {
-        if (( SP3_ABS & bRelRac[DIFL_M] ) && IsoStereo1->nCompInv2Abs == Stereo1->nCompInv2Abs)
+        if ((SP3_ABS & bRelRac[DIFL_M]) && IsoStereo1->nCompInv2Abs == Stereo1->nCompInv2Abs)
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -1226,18 +1227,18 @@ int CompINChILayers( const INCHI_SORT *p1,
 
     /* FI sp3 abs stereo inversion */
     psDifSegs = &sDifSegs[DIFL_FI][DIFS_m_SP3INV];
-    if ((SP3_ABS & bRelRac[DIFL_FI]) && IsoStereo1 && IsoStereo2 && Stereo2) /* djb-rwth: fixing a NULL pointer dereference */
+    if (SP3_ABS & bRelRac[DIFL_FI])
     {
-        if (( SP3_ABS & bRelRac[DIFL_F] ) && IsoStereo2->nCompInv2Abs == Stereo2->nCompInv2Abs)
+        if ((SP3_ABS & bRelRac[DIFL_F]) && IsoStereo2->nCompInv2Abs == Stereo2->nCompInv2Abs)
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
         else
         {
-            if (!( SP3_ABS & bRelRac[DIFL_M] ) &&
-            !( SP3_ABS & bRelRac[DIFL_F] ) &&
-       ( SP3_ABS & bRelRac[DIFL_MI] ) && /* make sure IsoStereo1 != NULL */
-            IsoStereo2->nCompInv2Abs == IsoStereo1->nCompInv2Abs)
+            if (!(SP3_ABS & bRelRac[DIFL_M]) &&
+                !(SP3_ABS & bRelRac[DIFL_F]) &&
+                (SP3_ABS & bRelRac[DIFL_MI]) && /* make sure IsoStereo1 != NULL */
+                IsoStereo2->nCompInv2Abs == IsoStereo1->nCompInv2Abs)
             {
                 *psDifSegs |= DIFV_FI_EQ_MI;
             }
@@ -1252,13 +1253,13 @@ int CompINChILayers( const INCHI_SORT *p1,
     {
         /* similar to /b */
         /* the order of || operands below is critically important: || is no a commutative operation */
-        if (( SP3_ABS & bRelRac[DIFL_F] ))
+        if ((SP3_ABS & bRelRac[DIFL_F]))
         {
             *psDifSegs |= DIFV_EQL2PRECED; /* isotopic is missing because there is no isotopes */
         }
         else
         {
-            if (( SP3_ABS & bRelRac[DIFL_MI] ) && !( SP3_ABS & bRelRac[DIFL_M] ))
+            if ((SP3_ABS & bRelRac[DIFL_MI]) && !(SP3_ABS & bRelRac[DIFL_M]))
             {
                 *psDifSegs |= i2 ? DIFV_IS_EMPTY : DIFV_EQL2PRECED;
             }
@@ -1276,7 +1277,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_F][DIFS_s_STYPE];
     if (bRelRac[DIFL_F] & SP3_TYPE)
     {
-        if (( bRelRac[DIFL_F] & SP3_TYPE ) == ( bRelRac[DIFL_M] & SP3_TYPE ))
+        if ((bRelRac[DIFL_F] & SP3_TYPE) == (bRelRac[DIFL_M] & SP3_TYPE))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -1301,7 +1302,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_MI][DIFS_s_STYPE];
     if (SP3_TYPE & bRelRac[DIFL_MI])
     {
-        if (( SP3_TYPE & bRelRac[DIFL_MI] ) == ( SP3_TYPE & bRelRac[DIFL_M] ))
+        if ((SP3_TYPE & bRelRac[DIFL_MI]) == (SP3_TYPE & bRelRac[DIFL_M]))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
@@ -1326,15 +1327,15 @@ int CompINChILayers( const INCHI_SORT *p1,
     psDifSegs = &sDifSegs[DIFL_FI][DIFS_s_STYPE];
     if (SP3_TYPE & bRelRac[DIFL_FI])
     {
-        if (( SP3_TYPE & bRelRac[DIFL_FI] ) == ( SP3_TYPE & bRelRac[DIFL_F] ))
+        if ((SP3_TYPE & bRelRac[DIFL_FI]) == (SP3_TYPE & bRelRac[DIFL_F]))
         {
             *psDifSegs |= DIFV_EQL2PRECED;
         }
         else
         {
-            if (!( SP3_TYPE & bRelRac[DIFL_M] ) &&
-            !( SP3_TYPE & bRelRac[DIFL_F] ) &&
-       ( SP3_TYPE & bRelRac[DIFL_MI] ))
+            if (!(SP3_TYPE & bRelRac[DIFL_M]) &&
+                !(SP3_TYPE & bRelRac[DIFL_F]) &&
+                (SP3_TYPE & bRelRac[DIFL_MI]))
             {
                 *psDifSegs |= DIFV_FI_EQ_MI;
             }
@@ -1348,13 +1349,13 @@ int CompINChILayers( const INCHI_SORT *p1,
     {
         /* similar to /b */
         /* the order of || operands below is critically important: || is not a commutative operation */
-        if (( SP3_TYPE & bRelRac[DIFL_F] ))
+        if ((SP3_TYPE & bRelRac[DIFL_F]))
         {
             *psDifSegs |= DIFV_EQL2PRECED; /* isotopic is missing because there is no isotopes */
         }
         else
         {
-            if (( SP3_TYPE & bRelRac[DIFL_MI] ) && !( SP3_TYPE & bRelRac[DIFL_M] ))
+            if ((SP3_TYPE & bRelRac[DIFL_MI]) && !(SP3_TYPE & bRelRac[DIFL_M]))
             {
                 *psDifSegs |= i2 ? DIFV_IS_EMPTY : DIFV_EQL2PRECED;
             }
@@ -1378,7 +1379,7 @@ int CompINChILayers( const INCHI_SORT *p1,
 
     /* M isotopic atoms */
     psDifSegs = &sDifSegs[DIFL_MI][DIFS_i_IATOMS];
-    if (i1 && !i1->bDeleted && ( i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups ))
+    if (i1 && !i1->bDeleted && (i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups))
     {
         *psDifSegs |= DIFV_NEQ2PRECED;
     }
@@ -1393,8 +1394,8 @@ int CompINChILayers( const INCHI_SORT *p1,
         if (i2->nNumberOfIsotopicAtoms || i2->nNumberOfIsotopicTGroups)
         {
             if (!i1 || i1->bDeleted ||
-                 i2->nNumberOfIsotopicAtoms != i1->nNumberOfIsotopicAtoms ||
-                 i2->nNumberOfIsotopicTGroups != i1->nNumberOfIsotopicTGroups)
+                i2->nNumberOfIsotopicAtoms != i1->nNumberOfIsotopicAtoms ||
+                i2->nNumberOfIsotopicTGroups != i1->nNumberOfIsotopicTGroups)
             {
                 *psDifSegs |= DIFV_NEQ2PRECED;
             }
@@ -1406,24 +1407,24 @@ int CompINChILayers( const INCHI_SORT *p1,
                 for (i = 0; i < num; i++)
                 {
                     /* compare isotopic atoms */
-                    if ((diff = (int) i2->IsotopicAtom[i].nAtomNumber - (int) i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
+                    if ((diff = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
                     {
                         break;
                     }
-                    if ((diff = (int) i2->IsotopicAtom[i].nIsoDifference - (int) i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
+                    if ((diff = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
                     {
                         break;
                     }
                     /* compare isotopic H */
-                    if ((diff = (int) i2->IsotopicAtom[i].nNum_T - (int) i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
+                    if ((diff = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
                     {
                         break;
                     }
-                    if ((diff = (int) i2->IsotopicAtom[i].nNum_D - (int) i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
+                    if ((diff = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
                     {
                         break;
                     }
-                    if ((diff = (int) i2->IsotopicAtom[i].nNum_H - (int) i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
+                    if ((diff = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
                     {
                         break;
                     }
@@ -1433,19 +1434,19 @@ int CompINChILayers( const INCHI_SORT *p1,
                     num = i1->nNumberOfIsotopicTGroups;
                     for (i = 0; i < num; i++)
                     {
-                        if ((diff = (int) i2->IsotopicTGroup[i].nTGroupNumber - (int) i1->IsotopicTGroup[i].nTGroupNumber)) /* djb-rwth: addressing LLVM warning */
+                        if ((diff = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber)) /* djb-rwth: addressing LLVM warning */
                         {
                             break;
                         }
-                        if ((diff = (int) i2->IsotopicTGroup[i].nNum_T - (int) i1->IsotopicTGroup[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
+                        if ((diff = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
                         {
                             break;
                         }
-                        if ((diff = (int) i2->IsotopicTGroup[i].nNum_D - (int) i1->IsotopicTGroup[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
+                        if ((diff = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
                         {
                             return diff;
                         }
-                        if ((diff = (int) i2->IsotopicTGroup[i].nNum_H - (int) i1->IsotopicTGroup[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
+                        if ((diff = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
                         {
                             break;
                         }
@@ -1456,7 +1457,7 @@ int CompINChILayers( const INCHI_SORT *p1,
         }
         else
         {
-            if (i1 && !i1->bDeleted && ( i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups ))
+            if (i1 && !i1->bDeleted && (i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups))
             {
                 *psDifSegs |= DIFV_IS_EMPTY;
             }
@@ -1466,7 +1467,7 @@ int CompINChILayers( const INCHI_SORT *p1,
     {
         if (!i2)
         {
-            if (i1 && !i1->bDeleted && ( i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups ))
+            if (i1 && !i1->bDeleted && (i1->nNumberOfIsotopicAtoms || i1->nNumberOfIsotopicTGroups))
             {
                 *psDifSegs |= DIFV_EQL2PRECED;
             }
@@ -1482,17 +1483,17 @@ int CompINChILayers( const INCHI_SORT *p1,
 
 
 /****************************************************************************/
-int INChI_SegmentAction( char cDifSegs )
+int INChI_SegmentAction(char cDifSegs)
 {
-    if (!( cDifSegs & DIFV_OUTPUT_OMIT_F ))
+    if (!(cDifSegs & DIFV_OUTPUT_OMIT_F))
     {
         return INCHI_SEGM_OMIT;
     }
-    if (( cDifSegs & DIFV_OUTPUT_EMPTY_T ) && !( cDifSegs & DIFV_OUTPUT_EMPTY_F ))
+    if ((cDifSegs & DIFV_OUTPUT_EMPTY_T) && !(cDifSegs & DIFV_OUTPUT_EMPTY_F))
     {
         return INCHI_SEGM_EMPTY;
     }
-    if (( cDifSegs & DIFV_OUTPUT_FILL_T ))
+    if ((cDifSegs & DIFV_OUTPUT_FILL_T))
     {
         return INCHI_SEGM_FILL;
     }
@@ -1521,12 +1522,12 @@ int INChI_SegmentAction( char cDifSegs )
         DIFV_IS_EMPTY; it will be output as empty (except M layer).
 
 ****************************************************************************/
-int MarkUnusedAndEmptyLayers( char sDifSegs[][DIFS_LENGTH] )
+int MarkUnusedAndEmptyLayers(char sDifSegs[][DIFS_LENGTH])
 {
     int i, nLayer, sBits, nFirstSegm;
 #define nFirstFmlSegm   DIFS_f_FORMULA
 #define nFirstIsoSegm   DIFS_i_IATOMS
-     /* FI */
+    /* FI */
     nLayer = DIFL_FI;
     nFirstSegm = nFirstIsoSegm;
     sBits = 0;
@@ -1534,21 +1535,21 @@ int MarkUnusedAndEmptyLayers( char sDifSegs[][DIFS_LENGTH] )
     {
         sBits |= sDifSegs[nLayer][i];
     }
-    if (!( sBits & DIFV_OUTPUT_OMIT_F ))
+    if (!(sBits & DIFV_OUTPUT_OMIT_F))
     {
         /* Omit the FI layer */
-        memset( sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH); /* djb-rwth: memset_s C11/Annex K variant? */
     }
     else
     {
         if (sDifSegs[nLayer][nFirstSegm] == DIFV_BOTH_EMPTY ||
-                !( sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F ))
+            !(sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F))
         {
             sDifSegs[nLayer][nFirstSegm] = DIFV_IS_EMPTY;
         }
     }
 
-        /* MI */
+    /* MI */
     nLayer = DIFL_MI;
     nFirstSegm = nFirstIsoSegm;
     sBits = 0;
@@ -1556,15 +1557,15 @@ int MarkUnusedAndEmptyLayers( char sDifSegs[][DIFS_LENGTH] )
     {
         sBits |= sDifSegs[nLayer][i];
     }
-    if (!( sBits & DIFV_OUTPUT_OMIT_F ))
+    if (!(sBits & DIFV_OUTPUT_OMIT_F))
     {
         /* Omit the MI layer */
-        memset( sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH); /* djb-rwth: memset_s C11/Annex K variant? */
     }
     else
     {
         if (sDifSegs[nLayer][nFirstSegm] == DIFV_BOTH_EMPTY ||
-          !( sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F ))
+            !(sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F))
         {
             sDifSegs[nLayer][nFirstSegm] = DIFV_IS_EMPTY;
         }
@@ -1578,16 +1579,16 @@ int MarkUnusedAndEmptyLayers( char sDifSegs[][DIFS_LENGTH] )
     {
         sBits |= sDifSegs[nLayer][i];
     }
-    if (!( sBits & DIFV_OUTPUT_OMIT_F ) &&
-         sDifSegs[DIFL_FI][nFirstIsoSegm] == DIFV_BOTH_EMPTY)
+    if (!(sBits & DIFV_OUTPUT_OMIT_F) &&
+        sDifSegs[DIFL_FI][nFirstIsoSegm] == DIFV_BOTH_EMPTY)
     {
         /* Omit the F layer: no non-iotopic and no isotopic segments */
-        memset( sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(sDifSegs[nLayer], DIFV_BOTH_EMPTY, DIFS_idf_LENGTH); /* djb-rwth: memset_s C11/Annex K variant? */
     }
     else
     {    /* do not omit fixed-H layer */
         if (sDifSegs[nLayer][nFirstSegm] == DIFV_BOTH_EMPTY ||
-             !( sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F ))
+            !(sDifSegs[nLayer][nFirstSegm] & DIFV_OUTPUT_OMIT_F))
         {
             sDifSegs[nLayer][nFirstSegm] = DIFV_IS_EMPTY;
         }
@@ -1603,65 +1604,65 @@ int MarkUnusedAndEmptyLayers( char sDifSegs[][DIFS_LENGTH] )
 
 
 /****************************************************************************/
-int CompareInchiStereo( INChI_Stereo *Stereo1,
-                        INCHI_MODE nFlags1,
-                        INChI_Stereo *Stereo2,
-                        INCHI_MODE nFlags2 )
+int CompareInchiStereo(INChI_Stereo* Stereo1,
+    INCHI_MODE nFlags1,
+    INChI_Stereo* Stereo2,
+    INCHI_MODE nFlags2)
 {
     int i, num, ret;
     if (Stereo2 && Stereo1)
     {
         /*  compare stereogenic bonds */
-        num = inchi_min( Stereo2->nNumberOfStereoBonds, Stereo1->nNumberOfStereoBonds );
+        num = inchi_min(Stereo2->nNumberOfStereoBonds, Stereo1->nNumberOfStereoBonds);
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) Stereo2->nBondAtom1[i] - (int) Stereo1->nBondAtom1[i])) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)Stereo2->nBondAtom1[i] - (int)Stereo1->nBondAtom1[i])) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) Stereo2->nBondAtom2[i] - (int) Stereo1->nBondAtom2[i])) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)Stereo2->nBondAtom2[i] - (int)Stereo1->nBondAtom2[i])) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) Stereo2->b_parity[i] - (int) Stereo1->b_parity[i])) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)Stereo2->b_parity[i] - (int)Stereo1->b_parity[i])) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
         }
-        if ((ret = (int) Stereo2->nNumberOfStereoBonds - (int) Stereo1->nNumberOfStereoBonds)) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)Stereo2->nNumberOfStereoBonds - (int)Stereo1->nNumberOfStereoBonds)) /* djb-rwth: addressing LLVM warning */
         {
             return ret;
         }
 
         /*  compare stereogenic atoms */
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
-        if (( ( nFlags1 | nFlags2 ) & ( INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO ) ) &&
-             1 == Stereo2->nNumberOfStereoCenters &&
-             1 == Stereo1->nNumberOfStereoCenters)
+        if (((nFlags1 | nFlags2) & (INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO)) &&
+            1 == Stereo2->nNumberOfStereoCenters &&
+            1 == Stereo1->nNumberOfStereoCenters)
         {
             ; /*  do not compare single stereocenters in case of relative stereo */
         }
         else
 #endif
         {
-            num = inchi_min( Stereo2->nNumberOfStereoCenters, Stereo1->nNumberOfStereoCenters );
+            num = inchi_min(Stereo2->nNumberOfStereoCenters, Stereo1->nNumberOfStereoCenters);
             for (i = 0; i < num; i++)
             {
-                if ((ret = (int) Stereo2->nNumber[i] - (int) Stereo1->nNumber[i])) /* djb-rwth: addressing LLVM warning */
+                if ((ret = (int)Stereo2->nNumber[i] - (int)Stereo1->nNumber[i])) /* djb-rwth: addressing LLVM warning */
                 {
                     return ret;
                 }
-                if ((ret = (int) Stereo2->t_parity[i] - (int) Stereo1->t_parity[i])) /* djb-rwth: addressing LLVM warning */
+                if ((ret = (int)Stereo2->t_parity[i] - (int)Stereo1->t_parity[i])) /* djb-rwth: addressing LLVM warning */
                 {
                     return ret;
                 }
             }
-            if ((ret = (int) Stereo2->nNumberOfStereoCenters - (int) Stereo1->nNumberOfStereoCenters)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)Stereo2->nNumberOfStereoCenters - (int)Stereo1->nNumberOfStereoCenters)) /* djb-rwth: addressing LLVM warning */
                 return ret;
             /*  compare stereo-abs-is-inverted flags  for non-relative, non-racemic */
-            if (!( ( nFlags1 | nFlags2 ) & ( INCHI_FLAG_RAC_STEREO | INCHI_FLAG_REL_STEREO ) ))
+            if (!((nFlags1 | nFlags2) & (INCHI_FLAG_RAC_STEREO | INCHI_FLAG_REL_STEREO)))
             {
-                if ((ret = ( Stereo2->nCompInv2Abs < 0 ) - ( Stereo1->nCompInv2Abs < 0 ))) /* djb-rwth: addressing LLVM warning */
+                if ((ret = (Stereo2->nCompInv2Abs < 0) - (Stereo1->nCompInv2Abs < 0))) /* djb-rwth: addressing LLVM warning */
                 {
                     return ret;
                 }
@@ -1670,27 +1671,27 @@ int CompareInchiStereo( INChI_Stereo *Stereo1,
     }
     else
     {
-        if (Stereo2 && ( Stereo2->nNumberOfStereoBonds > 0 || Stereo2->nNumberOfStereoCenters > 0
+        if (Stereo2 && (Stereo2->nNumberOfStereoBonds > 0 || Stereo2->nNumberOfStereoCenters > 0
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
-                         && /*  do not compare single stereocenters in case of relative stereo */
-                         !( ( nFlags2 & ( INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO ) ) &&
-                            1 == Stereo2->nNumberOfStereoCenters
-                            )
+            && /*  do not compare single stereocenters in case of relative stereo */
+            !((nFlags2 & (INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO)) &&
+                1 == Stereo2->nNumberOfStereoCenters
+                )
 #endif
-                         ))
+            ))
         {
             return 1;
         }
         else
         {
-            if (Stereo1 && ( Stereo1->nNumberOfStereoBonds > 0 || Stereo1->nNumberOfStereoCenters > 0
+            if (Stereo1 && (Stereo1->nNumberOfStereoBonds > 0 || Stereo1->nNumberOfStereoCenters > 0
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
-                             && /*  do not compare single stereocenters in case of relative stereo */
-                             !( ( nFlags1 & ( INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO ) ) &&
-                                1 == Stereo1->nNumberOfStereoCenters
-                                )
+                && /*  do not compare single stereocenters in case of relative stereo */
+                !((nFlags1 & (INCHI_FLAG_REL_STEREO | INCHI_FLAG_RAC_STEREO)) &&
+                    1 == Stereo1->nNumberOfStereoCenters
+                    )
 #endif
-                             ))
+                ))
             {
                 return -1;
             }
@@ -1708,37 +1709,37 @@ int CompareInchiStereo( INChI_Stereo *Stereo1,
         return -1 if *p1 > *p2, return +1 if *p1 < *p2
 
 ****************************************************************************/
-int CompINChI2( const INCHI_SORT *p1,
-                const INCHI_SORT *p2,
-                int bTaut,
-                int bCompareIsotopic )
+int CompINChI2(const INCHI_SORT* p1,
+    const INCHI_SORT* p2,
+    int bTaut,
+    int bCompareIsotopic)
 {
     int ret, num, i, num_H1, num_H2;
 
-    const INChI *i1 = NULL; /* tautomeric if exists, otherwise non-tautomeric */
-    const INChI *i2 = NULL; /* tautomeric if exists, otherwise non-tautomeric */
+    const INChI* i1 = NULL; /* tautomeric if exists, otherwise non-tautomeric */
+    const INChI* i2 = NULL; /* tautomeric if exists, otherwise non-tautomeric */
 
     int   n1;               /* TAUT_YES if tautomeric i1 exists, otherwise TAUT_NON */
     int   n2;               /* TAUT_YES if tautomeric i2 exists, otherwise TAUT_NON */
 
-    const INChI *i1n = NULL; /* non-tautomeric if both tautomeric AND non-tautomeric exist */
-    const INChI *i2n = NULL; /* non-tautomeric if both tautomeric AND non-tautomeric exist */
+    const INChI* i1n = NULL; /* non-tautomeric if both tautomeric AND non-tautomeric exist */
+    const INChI* i2n = NULL; /* non-tautomeric if both tautomeric AND non-tautomeric exist */
 
     /*const INChI *i1t = NULL;*/ /* temp for i1 if both tautomeric AND non-tautomeric exist */
     /*const INChI *i2t = NULL;*/ /* temp for i2 if both tautomeric AND non-tautomeric exist */
 
     /* INChI_Stereo *Stereo1, *Stereo2; */
 
-    n1 = ( p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms ) ? TAUT_YES : TAUT_NON;
-    n2 = ( p2->pINChI[TAUT_YES] && p2->pINChI[TAUT_YES]->nNumberOfAtoms ) ? TAUT_YES : TAUT_NON;
+    n1 = (p1->pINChI[TAUT_YES] && p1->pINChI[TAUT_YES]->nNumberOfAtoms) ? TAUT_YES : TAUT_NON;
+    n2 = (p2->pINChI[TAUT_YES] && p2->pINChI[TAUT_YES]->nNumberOfAtoms) ? TAUT_YES : TAUT_NON;
 
     i1 = p1->pINChI[n1];
-    i1n = ( n1 == TAUT_YES && p1->pINChI[TAUT_NON] &&
-           p1->pINChI[TAUT_NON]->nNumberOfAtoms ) ? p1->pINChI[TAUT_NON] : (const INChI *) NULL;
+    i1n = (n1 == TAUT_YES && p1->pINChI[TAUT_NON] &&
+        p1->pINChI[TAUT_NON]->nNumberOfAtoms) ? p1->pINChI[TAUT_NON] : (const INChI*)NULL;
 
     i2 = p2->pINChI[n2];
-    i2n = ( n2 == TAUT_YES && p2->pINChI[TAUT_NON] &&
-          p2->pINChI[TAUT_NON]->nNumberOfAtoms ) ? p2->pINChI[TAUT_NON] : (const INChI *) NULL;
+    i2n = (n2 == TAUT_YES && p2->pINChI[TAUT_NON] &&
+        p2->pINChI[TAUT_NON]->nNumberOfAtoms) ? p2->pINChI[TAUT_NON] : (const INChI*)NULL;
 
     /* non-deleted-non-empty < deleted < empty */
     if (i1 && !i2)
@@ -1755,7 +1756,7 @@ int CompINChI2( const INCHI_SORT *p1,
     num_H1 = num_H2 = 0;
 
     /* do not compare terminal H */
-    if ((ret = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = CompareHillFormulasNoH(i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2))) /* djb-rwth: addressing LLVM warning */
     {
         return ret;  /* lexicographic order except the shorter one is greater (last): CH2O < CH2; C3XX < C2XX */
     }
@@ -1764,7 +1765,7 @@ int CompINChI2( const INCHI_SORT *p1,
             compare non-isotopic non-tautomeric part
      *********************************************************/
 
-    /* compare number of atoms (excluding terminal H) */
+     /* compare number of atoms (excluding terminal H) */
     if ((ret = i2->nNumberOfAtoms - i1->nNumberOfAtoms)) /* djb-rwth: addressing LLVM warning */
         return ret; /*  more atoms first */
 
@@ -1773,7 +1774,7 @@ int CompINChI2( const INCHI_SORT *p1,
     for (i = 0; i < num; i++)
     {
         /* should always be equal if Hill formulas are same */
-        if ((ret = (int) i2->nAtom[i] - (int) i1->nAtom[i])) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)i2->nAtom[i] - (int)i1->nAtom[i])) /* djb-rwth: addressing LLVM warning */
             return ret; /* greater periodic number first */
     }
 
@@ -1785,7 +1786,7 @@ int CompINChI2( const INCHI_SORT *p1,
     num = i2->lenConnTable;
     for (i = 0; i < num; i++)
     {
-        if ((ret = (int) i2->nConnTable[i] - (int) i1->nConnTable[i])) /* djb-rwth: addressing LLVM warning */
+        if ((ret = (int)i2->nConnTable[i] - (int)i1->nConnTable[i])) /* djb-rwth: addressing LLVM warning */
             return ret; /* greater connection table first */
     }
 
@@ -1807,14 +1808,14 @@ int CompINChI2( const INCHI_SORT *p1,
         {
             return !i2->nNum_H[i] ? 1 :  /* no H first */
                 !i1->nNum_H[i] ? -1 :
-                (int) i2->nNum_H[i] - (int) i1->nNum_H[i];
+                (int)i2->nNum_H[i] - (int)i1->nNum_H[i];
         }
     }
 
     /*********************************************************
          compare non-isotopic tautomeric part
      *********************************************************/
-    if ((ret = CompareTautNonIsoPartOfINChI( i1, i2 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = CompareTautNonIsoPartOfINChI(i1, i2))) /* djb-rwth: addressing LLVM warning */
     {
         return ret;
     }
@@ -1835,32 +1836,32 @@ int CompINChI2( const INCHI_SORT *p1,
      *                                                       *
      *********************************************************/
 
-    /*********************************************************
-       non-tautomeric "fixed H" specific
-     *********************************************************/
-    if (TAUT_NON == bTaut && ( (i1n && i1n->nNum_H_fixed) || (i2n && i2n->nNum_H_fixed) )) /* djb-rwth: addressing LLVM warning */
+     /*********************************************************
+        non-tautomeric "fixed H" specific
+      *********************************************************/
+    if (TAUT_NON == bTaut && ((i1n && i1n->nNum_H_fixed) || (i2n && i2n->nNum_H_fixed))) /* djb-rwth: addressing LLVM warning */
     {
         /* first, compare non-tautomeric chem. formulas -- they may be different */
-        const char *f1 = ( i1n /*&& i1n->nNum_H_fixed*/ ) ? i1n->szHillFormula : i1->szHillFormula;
-        const char *f2 = ( i2n /*&& i2n->nNum_H_fixed*/ ) ? i2n->szHillFormula : i2->szHillFormula;
-        if (f1 && f2 && ( ret = CompareHillFormulas( f1, f2 ) ))
+        const char* f1 = (i1n /*&& i1n->nNum_H_fixed*/) ? i1n->szHillFormula : i1->szHillFormula;
+        const char* f2 = (i2n /*&& i2n->nNum_H_fixed*/) ? i2n->szHillFormula : i2->szHillFormula;
+        if (f1 && f2 && (ret = CompareHillFormulas(f1, f2)))
         {
             return ret;
         }
         /* secondly, compare fixed-H distribution */
         if (i1n && i1n->nNum_H_fixed && i2n && i2n->nNum_H_fixed)
         {
-            num = inchi_min( i1n->nNumberOfAtoms, i2n->nNumberOfAtoms );
+            num = inchi_min(i1n->nNumberOfAtoms, i2n->nNumberOfAtoms);
             for (i = 0; i < num; i++)
             {
                 if (i2n->nNum_H_fixed[i] != i1n->nNum_H_fixed[i])
                 {
                     return !i2n->nNum_H_fixed[i] ? 1 : /* no fixed H first */
                         !i1n->nNum_H_fixed[i] ? -1 :
-                        (int) i2n->nNum_H_fixed[i] - (int) i1n->nNum_H_fixed[i];
+                        (int)i2n->nNum_H_fixed[i] - (int)i1n->nNum_H_fixed[i];
                 }
             }
-            if ((ret = (int) i2n->nNumberOfAtoms - (int) i1n->nNumberOfAtoms)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2n->nNumberOfAtoms - (int)i1n->nNumberOfAtoms)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret; /* should not happen <BRKPT> */
             }
@@ -1919,7 +1920,7 @@ int CompINChI2( const INCHI_SORT *p1,
     /*********************************************************
         compare non-isotopic stereo
      *********************************************************/
-    ret = CompareInchiStereo( i1->Stereo, i1->nFlags, i2->Stereo, i2->nFlags );
+    ret = CompareInchiStereo(i1->Stereo, i1->nFlags, i2->Stereo, i2->nFlags);
     if (ret)
     {
         return ret;
@@ -1927,20 +1928,20 @@ int CompINChI2( const INCHI_SORT *p1,
     /*******************************************************
         do not switch back to tautomeric i1, i2
      *******************************************************/
-    /* -- how to switch back --
-    if ( i1t ) {
-        i1  = i1t;
-        i1t = NULL;
-    }
-    if ( i2t ) {
-        i2  = i2t;
-        i2t = NULL;
-    }
-    */
+     /* -- how to switch back --
+     if ( i1t ) {
+         i1  = i1t;
+         i1t = NULL;
+     }
+     if ( i2t ) {
+         i2  = i2t;
+         i2t = NULL;
+     }
+     */
 
-    /******************************************************
-         compare isotopic non-tautomeric part
-     ******************************************************/
+     /******************************************************
+          compare isotopic non-tautomeric part
+      ******************************************************/
     if (bCompareIsotopic)
     {
         if ((ret = i2->nNumberOfIsotopicAtoms - i1->nNumberOfIsotopicAtoms)) /* djb-rwth: addressing LLVM warning */
@@ -1951,11 +1952,11 @@ int CompINChI2( const INCHI_SORT *p1,
         /*  compare isotopic atoms */
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) i2->IsotopicAtom[i].nAtomNumber - (int) i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nAtomNumber - (int)i1->IsotopicAtom[i].nAtomNumber)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicAtom[i].nIsoDifference - (int) i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nIsoDifference - (int)i1->IsotopicAtom[i].nIsoDifference)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
@@ -1965,15 +1966,15 @@ int CompINChI2( const INCHI_SORT *p1,
         /* if tautomeric comparison mode then here are compared only non-tautomeric H */
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_T - (int) i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_T - (int)i1->IsotopicAtom[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_D - (int) i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_D - (int)i1->IsotopicAtom[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicAtom[i].nNum_H - (int) i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicAtom[i].nNum_H - (int)i1->IsotopicAtom[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
@@ -1987,19 +1988,19 @@ int CompINChI2( const INCHI_SORT *p1,
         num = i1->nNumberOfIsotopicTGroups;
         for (i = 0; i < num; i++)
         {
-            if ((ret = (int) i2->IsotopicTGroup[i].nTGroupNumber - (int) i1->IsotopicTGroup[i].nTGroupNumber)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicTGroup[i].nTGroupNumber - (int)i1->IsotopicTGroup[i].nTGroupNumber)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicTGroup[i].nNum_T - (int) i1->IsotopicTGroup[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicTGroup[i].nNum_T - (int)i1->IsotopicTGroup[i].nNum_T)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicTGroup[i].nNum_D - (int) i1->IsotopicTGroup[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicTGroup[i].nNum_D - (int)i1->IsotopicTGroup[i].nNum_D)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
-            if ((ret = (int) i2->IsotopicTGroup[i].nNum_H - (int) i1->IsotopicTGroup[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
+            if ((ret = (int)i2->IsotopicTGroup[i].nNum_H - (int)i1->IsotopicTGroup[i].nNum_H)) /* djb-rwth: addressing LLVM warning */
             {
                 return ret;
             }
@@ -2008,7 +2009,7 @@ int CompINChI2( const INCHI_SORT *p1,
         /****************************************************
             compare isotopic stereo
          ****************************************************/
-        ret = CompareInchiStereo( i1->StereoIsotopic, i1->nFlags, i2->StereoIsotopic, i2->nFlags );
+        ret = CompareInchiStereo(i1->StereoIsotopic, i1->nFlags, i2->StereoIsotopic, i2->nFlags);
         if (ret)
         {
             return ret;
@@ -2022,10 +2023,10 @@ int CompINChI2( const INCHI_SORT *p1,
     if (i2->nTotalCharge && i1->nTotalCharge)
     {
         /*  both are charged; smaller charges first */
-        ret = (int) i1->nTotalCharge - (int) i2->nTotalCharge;
+        ret = (int)i1->nTotalCharge - (int)i2->nTotalCharge;
         return ret;
     }
-    if ((ret = ( i1->nTotalCharge ? 1 : 0 ) - ( i2->nTotalCharge ? 1 : 0 ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = (i1->nTotalCharge ? 1 : 0) - (i2->nTotalCharge ? 1 : 0))) /* djb-rwth: addressing LLVM warning */
     {
         /*  only one is charged; uncharged first */
         return ret;
@@ -2038,21 +2039,21 @@ int CompINChI2( const INCHI_SORT *p1,
 
 
 /****************************************************************************/
-int CompINChINonTaut2( const void *p1, const void *p2 )
+int CompINChINonTaut2(const void* p1, const void* p2)
 {
     int ret;
-    ret = CompINChI2( (const INCHI_SORT *) p1, (const INCHI_SORT *) p2, TAUT_NON, 1 );
+    ret = CompINChI2((const INCHI_SORT*)p1, (const INCHI_SORT*)p2, TAUT_NON, 1);
 #if ( CANON_FIXH_TRANS == 1 )
     if (!ret)
     {
         /* to obtain canonical transposition 2004-05-10 */
-        ret = CompINChI2( (const INCHI_SORT *) p1, (const INCHI_SORT *) p2, TAUT_YES, 1 );
+        ret = CompINChI2((const INCHI_SORT*)p1, (const INCHI_SORT*)p2, TAUT_YES, 1);
     }
 #endif
     if (!ret)
     {
         /* stable sort */
-        ret = ( (const INCHI_SORT *) p1 )->ord_number - ( (const INCHI_SORT *) p2 )->ord_number;
+        ret = ((const INCHI_SORT*)p1)->ord_number - ((const INCHI_SORT*)p2)->ord_number;
     }
 
     return ret;
@@ -2060,21 +2061,21 @@ int CompINChINonTaut2( const void *p1, const void *p2 )
 
 
 /****************************************************************************/
-int CompINChITaut2( const void *p1, const void *p2 )
+int CompINChITaut2(const void* p1, const void* p2)
 {
     int ret;
-    ret = CompINChI2( (const INCHI_SORT *) p1, (const INCHI_SORT *) p2, TAUT_YES, 1 );
+    ret = CompINChI2((const INCHI_SORT*)p1, (const INCHI_SORT*)p2, TAUT_YES, 1);
 #if ( CANON_FIXH_TRANS == 1 )
     if (!ret)
     {
         /* to obtain canonical transposition 2004-05-10 */
-        ret = CompINChI2( (const INCHI_SORT *) p1, (const INCHI_SORT *) p2, TAUT_NON, 1 );
+        ret = CompINChI2((const INCHI_SORT*)p1, (const INCHI_SORT*)p2, TAUT_NON, 1);
     }
 #endif
     if (!ret)
     {
         /* stable sort */
-        ret = ( (const INCHI_SORT *) p1 )->ord_number - ( (const INCHI_SORT *) p2 )->ord_number;
+        ret = ((const INCHI_SORT*)p1)->ord_number - ((const INCHI_SORT*)p2)->ord_number;
     }
 
     return ret;
@@ -2086,9 +2087,9 @@ int CompINChITaut2( const void *p1, const void *p2 )
     NB:
     strrev from K&R is not in ANSI-compatible C library
 ****************************************************************************/
-void mystrrev( char *p )
+void mystrrev(char* p)
 {
-    char c, *q = p;
+    char c, * q = p;
     while (*q++)
     {
         ;
@@ -2108,18 +2109,18 @@ Find DFS order for CT(canon. numbers and Hs) output
 ****************************************************************************/
 typedef struct tagOrderStruct
 {
-    AT_NUMB   *m_gDfs4CT_nDfsNumber;
-    AT_NUMB   *m_gDfs4CT_nNumDescendants;
+    AT_NUMB* m_gDfs4CT_nDfsNumber;
+    AT_NUMB* m_gDfs4CT_nNumDescendants;
     int        m_gDfs4CT_nCurrentAtom;
 } OrderStruct;
 
 
 /****************************************************************************/
-static int CompareDfsDescendants4CT( const void *a1, const void *a2, void *p )
+static int CompareDfsDescendants4CT(const void* a1, const void* a2, void* p)
 {
-    OrderStruct *os = (OrderStruct *) p;
-    int neigh1 = ( int )*(const AT_RANK*) a1;
-    int neigh2 = ( int )*(const AT_RANK*) a2;
+    OrderStruct* os = (OrderStruct*)p;
+    int neigh1 = (int)*(const AT_RANK*)a1;
+    int neigh2 = (int)*(const AT_RANK*)a2;
     if (neigh1 > MAX_ATOMS)
     {
         if (neigh2 > MAX_ATOMS)
@@ -2136,45 +2137,45 @@ static int CompareDfsDescendants4CT( const void *a1, const void *a2, void *p )
     {
         AT_RANK nCurDfsNumber = os->m_gDfs4CT_nDfsNumber[os->m_gDfs4CT_nCurrentAtom];
         int nDesc1 = nCurDfsNumber > os->m_gDfs4CT_nDfsNumber[neigh1] ?
-            0 : (int) os->m_gDfs4CT_nNumDescendants[neigh1];
+            0 : (int)os->m_gDfs4CT_nNumDescendants[neigh1];
         int nDesc2 = nCurDfsNumber > os->m_gDfs4CT_nDfsNumber[neigh2] ?
-            0 : (int) os->m_gDfs4CT_nNumDescendants[neigh2];
+            0 : (int)os->m_gDfs4CT_nNumDescendants[neigh2];
         int ret;
         if ((ret = nDesc1 - nDesc2)) /* djb-rwth: addressing LLVM warning */
         {
             return ret;
         }
-        return  (int) neigh1 - (int) neigh2; /*  canon. numbers difference */
+        return  (int)neigh1 - (int)neigh2; /*  canon. numbers difference */
     }
 }
 
 
 /****************************************************************************/
-AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
-                         AT_NUMB *LinearCT,
-                         int nLenCT,
-                         S_CHAR *nNum_H,
-                         int num_atoms,
-                         int nCtMode )
+AT_NUMB* GetDfsOrder4CT(CANON_GLOBALS* pCG,
+    AT_NUMB* LinearCT,
+    int nLenCT,
+    S_CHAR* nNum_H,
+    int num_atoms,
+    int nCtMode)
 {
-    AT_NUMB    *nStackAtom = NULL;
+    AT_NUMB* nStackAtom = NULL;
     int         nTopStackAtom = -1;
-    AT_NUMB    *nNumDescendants = NULL; /*  number of descendants incl. closures and the atom itself */
-    AT_NUMB    *nDfsNumber = NULL;
-    S_CHAR     *cNeighNumb = NULL;
-    NEIGH_LIST *nl = NULL;
+    AT_NUMB* nNumDescendants = NULL; /*  number of descendants incl. closures and the atom itself */
+    AT_NUMB* nDfsNumber = NULL;
+    S_CHAR* cNeighNumb = NULL;
+    NEIGH_LIST* nl = NULL;
     AT_NUMB     nDfs;
     int         i, j, u, k, start, num_rings, nTotOutputStringLen;
-    AT_NUMB    *nOutputString = NULL, cDelim;
-    int         bCtPredecessors = ( nCtMode & CT_MODE_PREDECESSORS );
+    AT_NUMB* nOutputString = NULL, cDelim;
+    int         bCtPredecessors = (nCtMode & CT_MODE_PREDECESSORS);
     OrderStruct os;
 
     /*  allocate arrays */
-    nStackAtom = (AT_NUMB *) inchi_malloc( num_atoms * sizeof( nStackAtom[0] ) );
-    nNumDescendants = (AT_NUMB *) inchi_malloc( num_atoms * sizeof( nNumDescendants[0] ) );
-    nDfsNumber = (AT_NUMB *) inchi_malloc( num_atoms * sizeof( nDfsNumber[0] ) );
-    cNeighNumb = (S_CHAR  *) inchi_malloc( num_atoms * sizeof( cNeighNumb[0] ) );
-    nl = CreateNeighListFromLinearCT( LinearCT, nLenCT, num_atoms );
+    nStackAtom = (AT_NUMB*)inchi_malloc(num_atoms * sizeof(nStackAtom[0]));
+    nNumDescendants = (AT_NUMB*)inchi_malloc(num_atoms * sizeof(nNumDescendants[0]));
+    nDfsNumber = (AT_NUMB*)inchi_malloc(num_atoms * sizeof(nDfsNumber[0]));
+    cNeighNumb = (S_CHAR*)inchi_malloc(num_atoms * sizeof(cNeighNumb[0]));
+    nl = CreateNeighListFromLinearCT(LinearCT, nLenCT, num_atoms);
 
     /*  check allocation */
     if (!nStackAtom || !nNumDescendants || !nDfsNumber || !cNeighNumb || !nl)
@@ -2213,9 +2214,9 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
     u = start; /* start atom */
     nDfs = 0;
     nTopStackAtom = -1;
-    memset( nDfsNumber, 0, num_atoms * sizeof( nDfsNumber[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
-    memset( nNumDescendants, 0, num_atoms * sizeof( nNumDescendants[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
-    memset( cNeighNumb, 0, num_atoms * sizeof( cNeighNumb[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(nDfsNumber, 0, num_atoms * sizeof(nDfsNumber[0])); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(nNumDescendants, 0, num_atoms * sizeof(nNumDescendants[0])); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(cNeighNumb, 0, num_atoms * sizeof(cNeighNumb[0])); /* djb-rwth: memset_s C11/Annex K variant? */
     /*  push the start atom on the stack */
     nDfsNumber[u] = ++nDfs;
     if (bCtPredecessors)
@@ -2226,7 +2227,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
     {
         nNumDescendants[u] = 1; /* count itself as a descendant */
     }
-    nStackAtom[++nTopStackAtom] = (AT_NUMB) u;
+    nStackAtom[++nTopStackAtom] = (AT_NUMB)u;
     /* nNumStartChildren = 0; */
     num_rings = 0;
 
@@ -2234,18 +2235,18 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
     do
     {
         /* advance */
-        while (i = (int) nStackAtom[nTopStackAtom], j = (int) cNeighNumb[i] + 1, (int) nl[i][0] >= j)
+        while (i = (int)nStackAtom[nTopStackAtom], j = (int)cNeighNumb[i] + 1, (int)nl[i][0] >= j)
             /*while ( (int)nl[i=nStackAtom[nTopStackAtom]][0] >= (j = (int)cNeighNumb[i]+1) )*/
 
             /* replaced due to missing sequence point; undefined behavior, pointed by Geoffrey Hutchison */
         {
-            cNeighNumb[i] ++;
-            u = (int) nl[i][j]; /*  jth neighbor of the vertex i */
+            cNeighNumb[i]++;
+            u = (int)nl[i][j]; /*  jth neighbor of the vertex i */
             if (!nDfsNumber[u])
             {
                 /* tree edge, 1st visit -- advance */
                 /* put unexplored vertex u on the stack for further examination */
-                nStackAtom[++nTopStackAtom] = (AT_NUMB) u;
+                nStackAtom[++nTopStackAtom] = (AT_NUMB)u;
                 nDfsNumber[u] = ++nDfs;
                 if (bCtPredecessors)
                 {
@@ -2253,19 +2254,19 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
                 }
                 else
                 {
-                    nNumDescendants[u] ++; /* count atom u as its descendant */
+                    nNumDescendants[u]++; /* count atom u as its descendant */
                 }
             }
             else
             {
-                if (nTopStackAtom && u != (int) nStackAtom[nTopStackAtom - 1] &&
+                if (nTopStackAtom && u != (int)nStackAtom[nTopStackAtom - 1] &&
                     /* back edge: u is not a predecessor of i */
                     nDfsNumber[u] < nDfsNumber[i])
                 {
                     /* Back edge, 1st visit: u is an ancestor of i (ring closure) */
                     if (!bCtPredecessors)
                     {
-                        nNumDescendants[i] ++; /* count closures as descendants */
+                        nNumDescendants[i]++; /* count closures as descendants */
                     }
                     num_rings++;          /* count ring closures */
                 }
@@ -2280,7 +2281,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
                               /* back up */
         if (!bCtPredecessors && nTopStackAtom /* that is, i != start */)
         {
-            u = (int) nStackAtom[nTopStackAtom - 1]; /* predecessor of i */
+            u = (int)nStackAtom[nTopStackAtom - 1]; /* predecessor of i */
             nNumDescendants[u] += nNumDescendants[i]; /* add descendants */
         }
     } while (--nTopStackAtom >= 0);
@@ -2300,7 +2301,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
         if (nl[i][0] > 1)
         {
             os.m_gDfs4CT_nCurrentAtom = i;
-            insertions_sort( &os, &nl[i][1], nl[i][0], sizeof( nl[i][1] ), CompareDfsDescendants4CT );
+            insertions_sort(&os, &nl[i][1], nl[i][0], sizeof(nl[i][1]), CompareDfsDescendants4CT);
         }
         /* reduce number of neighbors to exclude deleted */
         for (k = 0; k < nl[i][0] && nl[i][k + 1] <= MAX_ATOMS; k++)
@@ -2310,11 +2311,11 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
         nl[i][0] = k;
     }
 
-    nTotOutputStringLen = 3 * ( num_atoms + num_rings + 1 ); /*  last 3 elements are a 'zero termination' */
+    nTotOutputStringLen = 3 * (num_atoms + num_rings + 1); /*  last 3 elements are a 'zero termination' */
 
     if (bCtPredecessors)
     {
-        if ((nOutputString = (AT_RANK *) inchi_calloc( nTotOutputStringLen, sizeof( nOutputString[0] ) ))) /* djb-rwth: addressing LLVM warning */
+        if ((nOutputString = (AT_RANK*)inchi_calloc(nTotOutputStringLen, sizeof(nOutputString[0])))) /* djb-rwth: addressing LLVM warning */
         {
             cDelim = '-';
             for (u = 0, k = -3; u < num_atoms; u++)
@@ -2346,7 +2347,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
     {
         if (nNumDescendants)
         {  /* do not need anymore */
-            inchi_free( nNumDescendants );
+            inchi_free(nNumDescendants);
             nNumDescendants = NULL;
         }
 
@@ -2361,13 +2362,13 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
               (num_rings) delimiters for the ring closures
         */
 
-        if ((nOutputString = (AT_RANK *) inchi_calloc( nTotOutputStringLen, sizeof( nOutputString[0] ) ))) /* djb-rwth: addressing LLVM warning */
+        if ((nOutputString = (AT_RANK*)inchi_calloc(nTotOutputStringLen, sizeof(nOutputString[0])))) /* djb-rwth: addressing LLVM warning */
         {
             u = start; /*  start atom */
             nTopStackAtom = -1;
-            memset( cNeighNumb, 0, num_atoms * sizeof( cNeighNumb[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+            memset(cNeighNumb, 0, num_atoms * sizeof(cNeighNumb[0])); /* djb-rwth: memset_s C11/Annex K variant? */
             /*  push the start atom on the stack */
-            nStackAtom[++nTopStackAtom] = (AT_NUMB) u;
+            nStackAtom[++nTopStackAtom] = (AT_NUMB)u;
             /*  output the starting atom */
             k = 0;
             nOutputString[k] = u + 1;
@@ -2377,7 +2378,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
             do
             {
                 /* advance */
-                while (i = (int) nStackAtom[nTopStackAtom], j = (int) cNeighNumb[i] + 1, i < num_atoms && (int) nl[i][0] >= j) /* djb-rwth: additional condition to avoid buffer overruns */
+                while (i = (int)nStackAtom[nTopStackAtom], j = (int)cNeighNumb[i] + 1, i < num_atoms && (int)nl[i][0] >= j) /* djb-rwth: additional condition to avoid buffer overruns */
                     /*while ( (int)nl[i=nStackAtom[nTopStackAtom]][0] >= (j = (int)cNeighNumb[i]+1) )*/
                     /* replaced due to missing sequence point; undefined behavior, reported by Geoffrey Hutchison */
                 {
@@ -2386,8 +2387,8 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
                     {
                         goto exit_error;  /* program error */
                     }
-                    cNeighNumb[i] ++;
-                    u = (int) nl[i][j]; /* neighbor */
+                    cNeighNumb[i]++;
+                    u = (int)nl[i][j]; /* neighbor */
 
                     /* output neighbor's canonical number */
                     nOutputString[k] = u + 1;
@@ -2396,7 +2397,7 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
                     {
                         /* tree edge, 1st visit -- advance */
                         /* put 'unexplored' vertex u on the stack */
-                        nStackAtom[++nTopStackAtom] = (AT_NUMB) u;
+                        nStackAtom[++nTopStackAtom] = (AT_NUMB)u;
 
                         /* output neighbor's number of H */
                         nOutputString[k + 1] = nNum_H ? 16 + nNum_H[u] : 0;
@@ -2430,7 +2431,11 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
                     }
                     nOutputString[k + 2] = cDelim;
                 }
-                cNeighNumb[i] = 0;
+
+                if ((i >= 0) && (i < num_atoms)) /* djb-rwth: fixing coverity ID #499483 */
+                {
+                    cNeighNumb[i] = 0;
+                }
 
                 /* back up: nothing else to do */
             } while (--nTopStackAtom >= 0);
@@ -2441,30 +2446,30 @@ AT_NUMB *GetDfsOrder4CT( CANON_GLOBALS *pCG,
 exit_error:
     if (nOutputString)
     {
-        inchi_free( nOutputString );
+        inchi_free(nOutputString);
         nOutputString = NULL;
     }
 
 exit_function:
     if (nStackAtom)
     {
-        inchi_free( nStackAtom );
+        inchi_free(nStackAtom);
     }
     if (nNumDescendants)
     {
-        inchi_free( nNumDescendants );
+        inchi_free(nNumDescendants);
     }
     if (nDfsNumber)
     {
-        inchi_free( nDfsNumber );
+        inchi_free(nDfsNumber);
     }
     if (cNeighNumb)
     {
-        inchi_free( cNeighNumb );
+        inchi_free(cNeighNumb);
     }
     if (nl)
     {
-        FreeNeighList( nl );
+        FreeNeighList(nl);
     }
 
     return nOutputString;
@@ -2472,10 +2477,10 @@ exit_function:
 
 
 /****************************************************************************/
-int GetInpStructErrorType( INPUT_PARMS *ip,
-                           int err,
-                           char *pStrErrStruct,
-                           int num_inp_atoms )
+int GetInpStructErrorType(INPUT_PARMS* ip,
+    int err,
+    char* pStrErrStruct,
+    int num_inp_atoms)
 {
     if (err && err == 9)
     {
@@ -2503,17 +2508,17 @@ int GetInpStructErrorType( INPUT_PARMS *ip,
 
 
 /****************************************************************************/
-int ProcessStructError( INCHI_IOSTREAM *out_file,
-                        INCHI_IOSTREAM *log_file,
-                        char *pStrErrStruct,
-                        int nErrorType,
-                        long num_inp,
-                        INPUT_PARMS *ip )
+int ProcessStructError(INCHI_IOSTREAM* out_file,
+    INCHI_IOSTREAM* log_file,
+    char* pStrErrStruct,
+    int nErrorType,
+    long num_inp,
+    INPUT_PARMS* ip)
 {
     int b_ok;
 #ifdef TARGET_LIB_FOR_WINCHI
-    int bPlainText = ( ip->bINChIOutputOptions & INCHI_OUT_PLAIN_TEXT ) &&
-        ( ip->bINChIOutputOptions & INCHI_OUT_WINCHI_WINDOW );
+    int bPlainText = (ip->bINChIOutputOptions & INCHI_OUT_PLAIN_TEXT) &&
+        (ip->bINChIOutputOptions & INCHI_OUT_WINCHI_WINDOW);
 #else
     int bPlainText = 0;
 #endif
@@ -2528,14 +2533,14 @@ int ProcessStructError( INCHI_IOSTREAM *out_file,
         b_ok = 0; /* to make VC++ happy */
         if (bPlainText)
         {
-            if (!( b_ok = OutputINChIPlainError( out_file, pStrErrStruct, nErrorType ) ))
+            if (!(b_ok = OutputINChIPlainError(out_file, pStrErrStruct, nErrorType)))
             {
-                inchi_ios_eprint( log_file, "Cannot create message for error (structure #%ld.%s%s%s%s) Terminating.\n",
-                                                            num_inp, SDF_LBL_VAL( ip->pSdfLabel, ip->pSdfValue ) );
+                inchi_ios_eprint(log_file, "Cannot create message for error (structure #%ld.%s%s%s%s) Terminating.\n",
+                    num_inp, SDF_LBL_VAL(ip->pSdfLabel, ip->pSdfValue));
             }
             else
             {
-                inchi_ios_print( out_file, "\n" ); /* add a blank line after the WINCHI Window message */
+                inchi_ios_print(out_file, "\n"); /* add a blank line after the WINCHI Window message */
             }
         }
         return b_ok ? nErrorType : _IS_FATAL;
@@ -2547,17 +2552,17 @@ int ProcessStructError( INCHI_IOSTREAM *out_file,
 
 #if ( READ_INCHI_STRING == 1 ) /*  { */
 /****************************************************************************/
-int CompareReversedStereoINChI( INChI_Stereo *s1/* InChI from reversed struct */,
-                                INChI_Stereo *s2 /* input InChI */
+int CompareReversedStereoINChI(INChI_Stereo* s1/* InChI from reversed struct */,
+    INChI_Stereo* s2 /* input InChI */
 )
 {
     if (s1 == NULL && s2 == NULL)
     {
         return 0;
     }
-    if (( s1 == NULL ) ^ ( s2 == NULL ))
+    if ((s1 == NULL) ^ (s2 == NULL))
     {
-        INChI_Stereo *s = s1 ? s1 : s2;
+        INChI_Stereo* s = s1 ? s1 : s2;
         if (s->nNumberOfStereoCenters || s->nNumberOfStereoBonds)
         {
             return 20; /* Diff: Missing Stereo */
@@ -2574,11 +2579,11 @@ int CompareReversedStereoINChI( INChI_Stereo *s1/* InChI from reversed struct */
     }
     if (s1->nNumberOfStereoCenters > 0)
     {
-        if (memcmp( s1->nNumber, s2->nNumber, s1->nNumberOfStereoCenters * sizeof( s1->nNumber[0] ) ))
+        if (memcmp(s1->nNumber, s2->nNumber, s1->nNumberOfStereoCenters * sizeof(s1->nNumber[0])))
         {
             return 22;  /* Diff: sp3 stereocenter locations */
         }
-        if (memcmp( s1->t_parity, s2->t_parity, s1->nNumberOfStereoCenters * sizeof( s1->t_parity[0] ) ))
+        if (memcmp(s1->t_parity, s2->t_parity, s1->nNumberOfStereoCenters * sizeof(s1->t_parity[0])))
         {
             return 23;  /* Diff: sp3 stereocenter parities */
         }
@@ -2608,15 +2613,15 @@ int CompareReversedStereoINChI( INChI_Stereo *s1/* InChI from reversed struct */
     }
     if (s1->nNumberOfStereoBonds > 0)
     {
-        if (memcmp( s1->nBondAtom1, s2->nBondAtom1, s1->nNumberOfStereoBonds * sizeof( s1->nBondAtom1[0] ) ))
+        if (memcmp(s1->nBondAtom1, s2->nBondAtom1, s1->nNumberOfStereoBonds * sizeof(s1->nBondAtom1[0])))
         {
             return 26; /* Diff: Stereobond 1st atom locations */
         }
-        if (memcmp( s1->nBondAtom2, s2->nBondAtom2, s1->nNumberOfStereoBonds * sizeof( s1->nBondAtom2[0] ) ))
+        if (memcmp(s1->nBondAtom2, s2->nBondAtom2, s1->nNumberOfStereoBonds * sizeof(s1->nBondAtom2[0])))
         {
             return 27; /* Diff: Stereobond 2nd atom locations */
         }
-        if (memcmp( s1->b_parity, s2->b_parity, s1->nNumberOfStereoBonds * sizeof( s1->b_parity[0] ) ))
+        if (memcmp(s1->b_parity, s2->b_parity, s1->nNumberOfStereoBonds * sizeof(s1->b_parity[0])))
         {
             return 28; /* Diff: Stereobond parities */
         }
@@ -2627,14 +2632,14 @@ int CompareReversedStereoINChI( INChI_Stereo *s1/* InChI from reversed struct */
 
 
 /****************************************************************************/
-int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct */,
-                                 INChI_Stereo *s2 /* input InChI */,
-                                 ICR *picr )
+int CompareReversedStereoINChI2(INChI_Stereo* s1/* InChI from reversed struct */,
+    INChI_Stereo* s2 /* input InChI */,
+    ICR* picr)
 {
     int ret = 0;
     int j1, j2, num_dif, num_extra_undf, num_miss_undf, num_in1_only, num_in2_only; /* djb-rwth: removing redundant variables */
-    int bAddSb = !( picr->num_sb_undef_in1_only + picr->num_sb_in1_only + picr->num_sb_in2_only );
-    int bAddSc = !( picr->num_sc_undef_in1_only + picr->num_sc_in1_only + picr->num_sc_in2_only );
+    int bAddSb = !(picr->num_sb_undef_in1_only + picr->num_sb_in1_only + picr->num_sb_in2_only);
+    int bAddSc = !(picr->num_sc_undef_in1_only + picr->num_sc_in1_only + picr->num_sc_in2_only);
 
     int nNumSc1 = s1 ? s1->nNumberOfStereoCenters : 0;
     int nNumSc2 = s2 ? s2->nNumberOfStereoCenters : 0;
@@ -2642,9 +2647,9 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
     int nNumSb2 = s2 ? s2->nNumberOfStereoBonds : 0;
 
     /* djb-rwth: redundant part of the condition corrected; fixing a NULL pointer dereference */
-    if (s1 && s2 && ( nNumSc1 || nNumSc2 ) && ( nNumSc1 != nNumSc2 ||
-            memcmp( s1->nNumber, s2->nNumber, nNumSc1 * sizeof( s1->nNumber[0] ) ) ||
-            memcmp( s1->t_parity, s2->t_parity, nNumSc1 * sizeof( s1->t_parity[0] ) ) ))
+    if (s1 && s2 && (nNumSc1 || nNumSc2) && (nNumSc1 != nNumSc2 ||
+        memcmp(s1->nNumber, s2->nNumber, nNumSc1 * sizeof(s1->nNumber[0])) ||
+        memcmp(s1->t_parity, s2->t_parity, nNumSc1 * sizeof(s1->t_parity[0]))))
     {
         num_dif = num_extra_undf = num_miss_undf = num_in1_only = num_in2_only = 0;
         for (j1 = j2 = 0; j1 < nNumSc1 && j2 < nNumSc2; )
@@ -2779,17 +2784,17 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
         ret |= IDIF_SC_INV;
     }
 
-    if (( nNumSb1 || nNumSb2 ) &&
-        ( nNumSb1 != nNumSb2 ||
-            memcmp( s1->nBondAtom1, s2->nBondAtom1, nNumSb1 * sizeof( s1->nBondAtom1[0] ) ) ||
-            memcmp( s1->nBondAtom2, s2->nBondAtom2, nNumSb1 * sizeof( s1->nBondAtom2[0] ) ) ||
-            memcmp( s1->b_parity, s2->b_parity, nNumSb1 * sizeof( s1->b_parity[0] ) ) ))
+    if ((nNumSb1 || nNumSb2) &&
+        (nNumSb1 != nNumSb2 ||
+            memcmp(s1->nBondAtom1, s2->nBondAtom1, nNumSb1 * sizeof(s1->nBondAtom1[0])) ||
+            memcmp(s1->nBondAtom2, s2->nBondAtom2, nNumSb1 * sizeof(s1->nBondAtom2[0])) ||
+            memcmp(s1->b_parity, s2->b_parity, nNumSb1 * sizeof(s1->b_parity[0]))))
     {
         num_dif = num_extra_undf = num_miss_undf = num_in1_only = num_in2_only = 0; /* djb-rwth: removing redundant code */
         for (j1 = j2 = 0; j1 < nNumSb1 && j2 < nNumSb2; )
         {
             if (s1->nBondAtom1[j1] == s2->nBondAtom1[j2] &&
-                 s1->nBondAtom2[j1] == s2->nBondAtom2[j2])
+                s1->nBondAtom2[j1] == s2->nBondAtom2[j2])
             {
                 if (s1->b_parity[j1] != s2->b_parity[j2]) /* djb-rwth: removing redundant code */
                 {
@@ -2801,7 +2806,7 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
             else
             {
                 if (s1->nBondAtom1[j1] < s2->nBondAtom1[j2] ||
-                        (s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] < s2->nBondAtom2[j2])) /* djb-rwth: addressing LLVM warning */
+                    (s1->nBondAtom1[j1] == s2->nBondAtom1[j2] && s1->nBondAtom2[j1] < s2->nBondAtom2[j2])) /* djb-rwth: addressing LLVM warning */
                 {
                     num_in1_only++;
                     if (s1->b_parity[j1] == AB_PARITY_UNDF)
@@ -2928,10 +2933,10 @@ int CompareReversedStereoINChI2( INChI_Stereo *s1/* InChI from reversed struct *
 
 
 /****************************************************************************/
-int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
-                          INChI *i2 /* input InChI */,
-                          INChI_Aux *a1,
-                          INChI_Aux *a2 )
+int CompareReversedINChI(INChI* i1 /* InChI from reversed struct */,
+    INChI* i2 /* input InChI */,
+    INChI_Aux* a1,
+    INChI_Aux* a2)
 {
     int ret;
 
@@ -2939,7 +2944,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
     {
         return 0;
     }
-    if (( i1 == NULL ) ^ ( i2 == NULL ))
+    if ((i1 == NULL) ^ (i2 == NULL))
     {
         return 1; /* Diff: Missing InChI */
     }
@@ -2966,15 +2971,15 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
 
     if (i1->nNumberOfAtoms > 0)
     {
-        if (memcmp( i1->nAtom, i2->nAtom, i1->nNumberOfAtoms * sizeof( i1->nAtom[0] ) ))
+        if (memcmp(i1->nAtom, i2->nAtom, i1->nNumberOfAtoms * sizeof(i1->nAtom[0])))
         {
             return 4; /* Diff: Elements */
         }
-        if (strcmp( i1->szHillFormula, i2->szHillFormula ))
+        if (strcmp(i1->szHillFormula, i2->szHillFormula))
         {
             return 7; /* Diff: Hill Formulas */
         }
-        if (memcmp( i1->nNum_H, i2->nNum_H, i1->nNumberOfAtoms * sizeof( i1->nNum_H[0] ) ))
+        if (memcmp(i1->nNum_H, i2->nNum_H, i1->nNumberOfAtoms * sizeof(i1->nNum_H[0])))
         {
             if (i1->lenConnTable > 1 || i2->lenConnTable > 1)
             {
@@ -3050,7 +3055,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
                 else
                 {
                     if (bHasFixedH1 && bHasFixedH2 &&
-                         memcmp( i1->nNum_H_fixed, i2->nNum_H_fixed, i1->nNumberOfAtoms * sizeof( i1->nNum_H_fixed[0] ) ))
+                        memcmp(i1->nNum_H_fixed, i2->nNum_H_fixed, i1->nNumberOfAtoms * sizeof(i1->nNum_H_fixed[0])))
                     {
                         for (i = j1 = j2 = 0; i < i1->nNumberOfAtoms; i++)
                         {
@@ -3069,12 +3074,12 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
                     }
                 }
             }
-            ret = ( j1 && j2 ) ? 20 : j1 ? 18 : j2 ? 19 : 0;
+            ret = (j1 && j2) ? 20 : j1 ? 18 : j2 ? 19 : 0;
             if (ret)
             {
                 return ret; /* 20 => Diff: NotEql Fixed-H */
-                            /* 19 => Diff: Missed Fixed-H (i1 has less) */
-                            /* 18 => Diff: Extra Fixed-H  (i1 has more) */
+                /* 19 => Diff: Missed Fixed-H (i1 has less) */
+                /* 18 => Diff: Extra Fixed-H  (i1 has more) */
             }
         }
     }
@@ -3083,18 +3088,18 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
     {
         return 8; /* Diff: Connections length */
     }
-    if (i1->lenConnTable > 0 && memcmp( i1->nConnTable, i2->nConnTable, i1->lenConnTable * sizeof( i1->nConnTable[0] ) ))
+    if (i1->lenConnTable > 0 && memcmp(i1->nConnTable, i2->nConnTable, i1->lenConnTable * sizeof(i1->nConnTable[0])))
     {
         return 9; /* Diff: Connections */
     }
 
     /* output special cases: different number of t-groups, different sizes of t-groups, different endpoints */
-    if (i1->lenTautomer != i2->lenTautomer && ( i1->lenTautomer > 1 || i2->lenTautomer > 1 ))
+    if (i1->lenTautomer != i2->lenTautomer && (i1->lenTautomer > 1 || i2->lenTautomer > 1))
     {
         return 10; /* Diff: Mobile groups length */ /* in isotopic or deprotonated cases i1->lenTautomer == 1 && i1->nTautomer[0] = 0 */
     }
-    if (( i1->lenTautomer > 1 && i2->lenTautomer > 1 ) &&
-         memcmp( i1->nTautomer, i2->nTautomer, i1->lenTautomer * sizeof( i1->nTautomer[0] ) ))
+    if ((i1->lenTautomer > 1 && i2->lenTautomer > 1) &&
+        memcmp(i1->nTautomer, i2->nTautomer, i1->lenTautomer * sizeof(i1->nTautomer[0])))
     {
         return 11; /* Diff: Mobile groups */
     }
@@ -3103,7 +3108,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
     {
         return 12; /* Diff: Isotopic atoms number */
     }
-    if (i1->nNumberOfIsotopicAtoms > 0 && memcmp( i1->IsotopicAtom, i2->IsotopicAtom, i1->nNumberOfIsotopicAtoms * sizeof( i1->IsotopicAtom[0] ) ))
+    if (i1->nNumberOfIsotopicAtoms > 0 && memcmp(i1->IsotopicAtom, i2->IsotopicAtom, i1->nNumberOfIsotopicAtoms * sizeof(i1->IsotopicAtom[0])))
     {
         return 13; /* Diff: Isotopic atoms */
     }
@@ -3129,7 +3134,7 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
         {
             return 16; /* Diff: Number of removed protons */
         }
-        if (memcmp( a1->nNumRemovedIsotopicH, a2->nNumRemovedIsotopicH, sizeof( a1->nNumRemovedIsotopicH ) ))
+        if (memcmp(a1->nNumRemovedIsotopicH, a2->nNumRemovedIsotopicH, sizeof(a1->nNumRemovedIsotopicH)))
         {
             return 17; /* Diff: Removed isotopic H */
         }
@@ -3155,22 +3160,22 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
     */
 
     /* ret = 20..31 => 40..51 */
-    if ((ret = CompareReversedStereoINChI( i1->Stereo, i2->Stereo ))) /* djb-rwth: addressing LLVM warning */
+    if ((ret = CompareReversedStereoINChI(i1->Stereo, i2->Stereo))) /* djb-rwth: addressing LLVM warning */
     {
         return ret + 20;
     }
     /* ret = 40..51 => 60..71 */
 
     if (!i2->StereoIsotopic && i2->Stereo && i1->StereoIsotopic &&
-         0 < ( i1->StereoIsotopic->nNumberOfStereoBonds + i1->StereoIsotopic->nNumberOfStereoCenters ) &&
-         0 == CompareReversedStereoINChI( i1->StereoIsotopic, i2->Stereo ))
+        0 < (i1->StereoIsotopic->nNumberOfStereoBonds + i1->StereoIsotopic->nNumberOfStereoCenters) &&
+        0 == CompareReversedStereoINChI(i1->StereoIsotopic, i2->Stereo))
     {
         /* InChI from reversed structure does not contain fully duplicated isotopic stereo */
         ;
     }
     else
     {
-        if ((ret = CompareReversedStereoINChI( i1->StereoIsotopic, i2->StereoIsotopic ))) /* djb-rwth: addressing LLVM warning */
+        if ((ret = CompareReversedStereoINChI(i1->StereoIsotopic, i2->StereoIsotopic))) /* djb-rwth: addressing LLVM warning */
         {
             return ret + 40;
         }
@@ -3181,11 +3186,11 @@ int CompareReversedINChI( INChI *i1 /* InChI from reversed struct */,
 
 
 /****************************************************************************/
-int CompareIcr( ICR *picr1,
-                ICR *picr2,
-                INCHI_MODE *pin1,
-                INCHI_MODE *pin2,
-                INCHI_MODE mask )
+int CompareIcr(ICR* picr1,
+    ICR* picr2,
+    INCHI_MODE* pin1,
+    INCHI_MODE* pin2,
+    INCHI_MODE mask)
 {
     int nNumExtraBits1 = 0, nNumExtraBits2 = 0, bit1, bit2;
     INCHI_MODE Flg1 = picr1->flags, Flg2 = picr2->flags, cur_bit = 1, in1, in2;
@@ -3195,7 +3200,7 @@ int CompareIcr( ICR *picr1,
     in1 = in2 = 0;
     for (i = 0; Flg1 || Flg2; i++, Flg1 >>= 1, Flg2 >>= 1, cur_bit <<= 1)
     {
-        if (!( mask & cur_bit ))
+        if (!(mask & cur_bit))
         {
             continue;
         }
@@ -3254,26 +3259,26 @@ int CompareIcr( ICR *picr1,
 
 
 /****************************************************************************/
-INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
-                                  INChI *i2 /* input InChI */,
-                                  INChI_Aux *a1,
-                                  INChI_Aux *a2,
-                                  ICR *picr,
-                                  int *err )
+INCHI_MODE CompareReversedINChI2(INChI* i1 /* InChI from reversed struct */,
+    INChI* i2 /* input InChI */,
+    INChI_Aux* a1,
+    INChI_Aux* a2,
+    ICR* picr,
+    int* err)
 {
     INCHI_MODE ret = 0;
-    INChI_Stereo *Stereo1 = NULL, *Stereo2 = NULL;
+    INChI_Stereo* Stereo1 = NULL, * Stereo2 = NULL;
     int  n1, n2, m, j, j1, j2, ret2, num_H1, num_H2;
 
     *err = 0;
 
-    memset( picr, 0, sizeof( *picr ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(picr, 0, sizeof(*picr)); /* djb-rwth: memset_s C11/Annex K variant? */
 
     if (i1 == NULL && i2 == NULL)
     {
         return 0;
     }
-    if (( i1 == NULL ) ^ ( i2 == NULL ))
+    if ((i1 == NULL) ^ (i2 == NULL))
     {
         ret |= IDIF_PROBLEM; /* one InChI exists while another doesn't */
         goto exit_function;
@@ -3300,13 +3305,13 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     }
     if (i1->nNumberOfAtoms > 0)
     {
-        if (memcmp( i1->nAtom, i2->nAtom, i1->nNumberOfAtoms * sizeof( i1->nAtom[0] ) ))
+        if (memcmp(i1->nAtom, i2->nAtom, i1->nNumberOfAtoms * sizeof(i1->nAtom[0])))
         {
             ret |= IDIF_ATOMS;
             goto exit_function;
         }
         /* IDIF_NON_TAUT_H,  IDIF_MORE_FH, IDIF_LESS_FH */
-        if (memcmp( i1->nNum_H, i2->nNum_H, i1->nNumberOfAtoms * sizeof( i1->nNum_H[0] ) ))
+        if (memcmp(i1->nNum_H, i2->nNum_H, i1->nNumberOfAtoms * sizeof(i1->nNum_H[0])))
         {
             ret |= IDIF_POSITION_H;
             for (j1 = 0; j1 < i1->nNumberOfAtoms; j1++)
@@ -3382,7 +3387,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
                 else
                 {
                     if (bHasFixedH1 && bHasFixedH2 &&
-                            memcmp( i1->nNum_H_fixed, i2->nNum_H_fixed, i1->nNumberOfAtoms * sizeof( i1->nNum_H_fixed[0] ) ))
+                        memcmp(i1->nNum_H_fixed, i2->nNum_H_fixed, i1->nNumberOfAtoms * sizeof(i1->nNum_H_fixed[0])))
                     {
                         for (i = j1 = j2 = 0; i < i1->nNumberOfAtoms; i++)
                         {
@@ -3408,7 +3413,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
                                 }
                             }
                         }
-                        ret |= ( j1 ? IDIF_MORE_FH : 0 ) | ( j2 ? IDIF_LESS_FH : 0 );
+                        ret |= (j1 ? IDIF_MORE_FH : 0) | (j2 ? IDIF_LESS_FH : 0);
                         picr->num_fixed_H1_more = j1;
                         picr->num_fixed_H2_more = j2;
                     }
@@ -3420,7 +3425,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     /* compare formulas and H */
     num_H1 = 0;
     num_H2 = 0;
-    ret2 = CompareHillFormulasNoH( i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2 );
+    ret2 = CompareHillFormulasNoH(i1->szHillFormula, i2->szHillFormula, &num_H1, &num_H2);
     picr->tot_num_H1 = num_H1;
     picr->tot_num_H2 = num_H2;
     if (ret2)
@@ -3443,7 +3448,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     }
     else
     {
-        if (i1->lenConnTable > 0 && memcmp( i1->nConnTable, i2->nConnTable, i1->lenConnTable * sizeof( i1->nConnTable[0] ) ))
+        if (i1->lenConnTable > 0 && memcmp(i1->nConnTable, i2->nConnTable, i1->lenConnTable * sizeof(i1->nConnTable[0])))
         {
             ret |= IDIF_CON_TBL;
             goto exit_function;
@@ -3500,19 +3505,19 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
         /* number of endpoints */
         int num1 = 0, num2 = 0, num_M1 = 0, num_M2 = 0;
         int len, num_eq, num_in1_only, num_in2_only;
-        AT_NUMB *pe1 = (AT_NUMB *) inchi_malloc( ( (long long)i1->lenTautomer + 1 ) * sizeof( pe1[0] ) ); /* djb-rwth: cast operator added */
-        AT_NUMB *pe2 = (AT_NUMB *) inchi_malloc( ( (long long)i2->lenTautomer + 1 ) * sizeof( pe2[0] ) ); /* djb-rwth: cast operator added */
+        AT_NUMB* pe1 = (AT_NUMB*)inchi_malloc(((long long)i1->lenTautomer + 1) * sizeof(pe1[0])); /* djb-rwth: cast operator added */
+        AT_NUMB* pe2 = (AT_NUMB*)inchi_malloc(((long long)i2->lenTautomer + 1) * sizeof(pe2[0])); /* djb-rwth: cast operator added */
         num_H1 = num_H2 = 0;
         /* collect endpoints, H, (-) */
         if (!pe1 || !pe2)
         {
             if (pe1)
             {
-                inchi_free( pe1 );
+                inchi_free(pe1);
             }
             if (pe2)
             {
-                inchi_free( pe2 );
+                inchi_free(pe2);
             }
             *err = -1; /* allocation error */
             goto exit_function;
@@ -3542,8 +3547,8 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
         picr->num_taut_M1 = num_M1;
         picr->num_taut_M2 = num_M2;
         /* sort endpoints */
-        insertions_sort_AT_RANK( pe1, num1 );
-        insertions_sort_AT_RANK( pe2, num2 );
+        insertions_sort_AT_RANK(pe1, num1);
+        insertions_sort_AT_RANK(pe2, num2);
         /* compare */
         /*
         if ( num1 < num2 ) {
@@ -3619,13 +3624,13 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
         {
             ret |= IDIF_DIFF_TG_ENDP;
         }
-        inchi_free( pe1 );
-        inchi_free( pe2 );
+        inchi_free(pe1);
+        inchi_free(pe2);
     }
 
-    if (( i1->lenTautomer > 1 && i2->lenTautomer > 1 ) &&
-        ( i1->lenTautomer != i2->lenTautomer ||
-            memcmp( i1->nTautomer, i2->nTautomer, i1->lenTautomer * sizeof( i1->nTautomer[0] ) ) ))
+    if ((i1->lenTautomer > 1 && i2->lenTautomer > 1) &&
+        (i1->lenTautomer != i2->lenTautomer ||
+            memcmp(i1->nTautomer, i2->nTautomer, i1->lenTautomer * sizeof(i1->nTautomer[0]))))
     {
         ret |= IDIF_TG;
     }
@@ -3636,7 +3641,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     }
     else
     {
-        if (i1->nNumberOfIsotopicAtoms > 0 && memcmp( i1->IsotopicAtom, i2->IsotopicAtom, i1->nNumberOfIsotopicAtoms * sizeof( i1->IsotopicAtom[0] ) ))
+        if (i1->nNumberOfIsotopicAtoms > 0 && memcmp(i1->IsotopicAtom, i2->IsotopicAtom, i1->nNumberOfIsotopicAtoms * sizeof(i1->IsotopicAtom[0])))
         {
             ret |= IDIF_ISO_AT;
         }
@@ -3645,14 +3650,14 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     {
         ret |= IDIF_CHARGE;
     }
-    if (a1 && a1->nNumRemovedProtons && ( !a2 || a2->nNumRemovedProtons != a1->nNumRemovedProtons ))
+    if (a1 && a1->nNumRemovedProtons && (!a2 || a2->nNumRemovedProtons != a1->nNumRemovedProtons))
     {
         ret |= IDIF_REM_PROT;
     }
-    if (a1 && ( !a2 ||
+    if (a1 && (!a2 ||
         a2->nNumRemovedIsotopicH[0] != a1->nNumRemovedIsotopicH[0] ||
         a2->nNumRemovedIsotopicH[1] != a1->nNumRemovedIsotopicH[1] ||
-        a2->nNumRemovedIsotopicH[2] != a1->nNumRemovedIsotopicH[2] ))
+        a2->nNumRemovedIsotopicH[2] != a1->nNumRemovedIsotopicH[2]))
     {
         ret |= IDIF_REM_ISO_H;
     }
@@ -3670,7 +3675,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     */
 
     if (i1->StereoIsotopic &&
-         i1->StereoIsotopic->nNumberOfStereoBonds + i1->StereoIsotopic->nNumberOfStereoCenters)
+        i1->StereoIsotopic->nNumberOfStereoBonds + i1->StereoIsotopic->nNumberOfStereoCenters)
     {
         Stereo1 = i1->StereoIsotopic;
     }
@@ -3679,7 +3684,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
         Stereo1 = i1->Stereo;
     }
     if (i2->StereoIsotopic &&
-         i2->StereoIsotopic->nNumberOfStereoBonds + i2->StereoIsotopic->nNumberOfStereoCenters)
+        i2->StereoIsotopic->nNumberOfStereoBonds + i2->StereoIsotopic->nNumberOfStereoCenters)
     {
         Stereo2 = i2->StereoIsotopic;
     }
@@ -3687,7 +3692,7 @@ INCHI_MODE CompareReversedINChI2( INChI *i1 /* InChI from reversed struct */,
     {
         Stereo2 = i2->Stereo;
     }
-    ret |= CompareReversedStereoINChI2( Stereo1, Stereo2, picr );
+    ret |= CompareReversedStereoINChI2(Stereo1, Stereo2, picr);
 
 exit_function:
 
@@ -3699,63 +3704,69 @@ exit_function:
 
 
 /****************************************************************************/
-int  Create_INChI( CANON_GLOBALS *pCG,
-                   INCHI_CLOCK *ic,
-                   INPUT_PARMS *ip,
-                   INChI **ppINChI,
-                   INChI_Aux **ppINChI_Aux,
-                   ORIG_ATOM_DATA *orig_inp_data,
-                   inp_ATOM *inp_at,
-                   INP_ATOM_DATA *out_norm_data[2],
-                   int num_inp_at,
-                   INCHI_MODE nUserMode,
-                   INCHI_MODE *pbTautFlags,
-                   INCHI_MODE *pbTautFlagsDone,
-                   struct tagInchiTime *ulMaxTime,
-                   T_GROUP_INFO *ti_out,
-                   char *pStrErrStruct )
+int  Create_INChI(CANON_GLOBALS* pCG,
+    INCHI_CLOCK* ic,
+    INPUT_PARMS* ip,
+    INChI** ppINChI,
+    INChI_Aux** ppINChI_Aux,
+    ORIG_ATOM_DATA* orig_inp_data,
+    inp_ATOM* inp_at,
+    INP_ATOM_DATA* out_norm_data[2],
+    int num_inp_at,
+    INCHI_MODE nUserMode,
+    INCHI_MODE* pbTautFlags,
+    INCHI_MODE* pbTautFlagsDone,
+    struct tagInchiTime* ulMaxTime,
+    T_GROUP_INFO* ti_out,
+    char* pStrErrStruct)
 {
-/*
-#define NON_TAUT 0
-#define TAUT     1
-*/
-    int nebend = 0, *ebend = NULL;
+    /*
+    #define NON_TAUT 0
+    #define TAUT     1
+    */
+    int nebend = 0, * ebend = NULL;
 
-    sp_ATOM  *at[TAUT_NUM]; /* at[0]=>non-tautomeric, at[1]=>tautomeric */
+    sp_ATOM* at[TAUT_NUM]; /* at[0]=>non-tautomeric, at[1]=>tautomeric */
     int                       i, n1, n2, num_atoms, num_at_tg, num_removed_H, num_removed_H_taut = 0, ret = 0, ret2 = 0;
     INCHI_MODE                 nMode = 0;
     T_GROUP_INFO              vt_group_info;
     T_GROUP_INFO              vt_group_info_orig;
-    T_GROUP_INFO * /*const*/  t_group_info = &vt_group_info;
-    T_GROUP_INFO * /*const*/  t_group_info_orig = &vt_group_info_orig;
+    T_GROUP_INFO* /*const*/  t_group_info = &vt_group_info;
+    T_GROUP_INFO* /*const*/  t_group_info_orig = &vt_group_info_orig;
 
     CANON_STAT  CS, CS2;
-    CANON_STAT *pCS = &CS;
-    CANON_STAT *pCS2 = &CS2;  /*  save all allocations to avoid memory leaks in case Canon_INChI() removes the pointer */
+    CANON_STAT* pCS = &CS;
+    CANON_STAT* pCS2 = &CS2;  /*  save all allocations to avoid memory leaks in case Canon_INChI() removes the pointer */
 
     ATOM_SIZES  s[TAUT_NUM];
 
     BCN Bcn;
-    BCN *pBCN = &Bcn;
+    BCN* pBCN = &Bcn;
 
     int bHasIsotopicAtoms = 0;
     int bMayHaveStereo = 0;
     int num_taut_at = 0;
 
-    inp_ATOM *out_at = NULL;     /*, *norm_at_fixed_bonds[TAUT_NUM]; */ /*  = {out_norm_nontaut_at, out_norm_taut_at} ; */
-    INChI     *pINChI = NULL;      /* added initialization 2006-03 */
-    INChI_Aux *pINChI_Aux = NULL;  /* added initialization 2006-03 */
-    int        bPointedEdgeStereo = ( ( TG_FLAG_POINTED_EDGE_STEREO & *pbTautFlags ) ? PES_BIT_POINT_EDGE_STEREO : 0 )
-        | ( ( TG_FLAG_PHOSPHINE_STEREO    & *pbTautFlags ) ? PES_BIT_PHOSPHINE_STEREO : 0 )
-        | ( ( TG_FLAG_ARSINE_STEREO       & *pbTautFlags ) ? PES_BIT_ARSINE_STEREO : 0 )
-        | ( ( TG_FLAG_FIX_SP3_BUG         & *pbTautFlags ) ? PES_BIT_FIX_SP3_BUG : 0 );
-    INCHI_MODE bTautFlags = ( *pbTautFlags     & ( ~(INCHI_MODE) TG_FLAG_ALL_TAUTOMERIC ) );
-    INCHI_MODE bTautFlagsDone = ( *pbTautFlagsDone /*& (~(INCHI_MODE)TG_FLAG_ALL_TAUTOMERIC) */ );
+    inp_ATOM* out_at = NULL;     /*, *norm_at_fixed_bonds[TAUT_NUM]; */ /*  = {out_norm_nontaut_at, out_norm_taut_at} ; */
+    INChI* pINChI = NULL;      /* added initialization 2006-03 */
+    INChI_Aux* pINChI_Aux = NULL;  /* added initialization 2006-03 */
+    int        bPointedEdgeStereo = ((TG_FLAG_POINTED_EDGE_STEREO & *pbTautFlags) ? PES_BIT_POINT_EDGE_STEREO : 0)
+        | ((TG_FLAG_PHOSPHINE_STEREO & *pbTautFlags) ? PES_BIT_PHOSPHINE_STEREO : 0)
+        | ((TG_FLAG_ARSINE_STEREO & *pbTautFlags) ? PES_BIT_ARSINE_STEREO : 0)
+        | ((TG_FLAG_FIX_SP3_BUG & *pbTautFlags) ? PES_BIT_FIX_SP3_BUG : 0);
+    INCHI_MODE bTautFlags = (*pbTautFlags & (~(INCHI_MODE)TG_FLAG_ALL_TAUTOMERIC));
+    INCHI_MODE bTautFlagsDone = (*pbTautFlagsDone /*& (~(INCHI_MODE)TG_FLAG_ALL_TAUTOMERIC) */);
 #if ( bRELEASE_VERSION == 0 )
     int bExtract = 0; /*  EXTR_HAS_ATOM_WITH_DEFINED_PARITY; */
 #endif
 
-/* */
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
+#endif
+
+    /* */
     int bFixIsoFixedH = 0;
     int bFixTermHChrg = 0;
 
@@ -3766,7 +3777,7 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         unknown parity: either the same as for undefined parity (default==standard)
         or a specific one (non-std; requested by SLUUD switch).                 */
     int vABParityUnknown = AB_PARITY_UNDF;
-    if (0 != ( nUserMode & REQ_MODE_DIFF_UU_STEREO ))
+    if (0 != (nUserMode & REQ_MODE_DIFF_UU_STEREO))
     {
         /* Make labels for unknown and undefined stereo different */
         vABParityUnknown = AB_PARITY_UNKN;
@@ -3795,7 +3806,7 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         if (nebend)
         {
             nebend *= 2;
-            ebend = inchi_calloc( 2 * nebend, sizeof( int ) );
+            ebend = inchi_calloc(2 * nebend, sizeof(int));
             if (!ebend)
             {
                 ret = CT_OUT_OF_RAM; goto exit_function;
@@ -3814,13 +3825,13 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     }
 #endif
 
-    memset( s, 0, sizeof( s ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(s, 0, sizeof(s)); /* djb-rwth: memset_s C11/Annex K variant? */
     if (pBCN)
     {
-        memset( pBCN, 0, sizeof( pBCN[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(pBCN, 0, sizeof(pBCN[0])); /* djb-rwth: memset_s C11/Annex K variant? */
     }
-    memset( t_group_info, 0, sizeof( *t_group_info ) ); /* djb-rwth: memset_s C11/Annex K variant? */
-    memset( t_group_info_orig, 0, sizeof( *t_group_info_orig ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(t_group_info, 0, sizeof(*t_group_info)); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(t_group_info_orig, 0, sizeof(*t_group_info_orig)); /* djb-rwth: memset_s C11/Annex K variant? */
     /*norm_at[TAUT_NON] = out_norm_data[TAUT_NON]->at; *//* output normalized non-tautomeric component */
     /*norm_at[TAUT_YES] = out_norm_data[TAUT_YES]->at; *//* output normalized tautomeric component */
     /*norm_at_fixed_bonds[TAUT_NON] = NULL;*/
@@ -3829,7 +3840,7 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     {
         if (out_norm_data[i]->at)
         {
-            if (!( at[i] = (sp_ATOM  *) inchi_malloc( num_inp_at * sizeof( *at[0] ) ) ))
+            if (!(at[i] = (sp_ATOM*)inchi_malloc(num_inp_at * sizeof(*at[0]))))
             {
                 ret = -1;
             }
@@ -3839,9 +3850,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             at[i] = NULL;
         }
     }
-    
+
     if ((!out_norm_data[TAUT_NON]->at && !out_norm_data[TAUT_YES]->at)
-         || !inp_at || ret) /* djb-rwth: addressing LLVM warning */
+        || !inp_at || ret) /* djb-rwth: addressing LLVM warning */
     {
         ret = -1;
         goto exit_function;
@@ -3866,7 +3877,7 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         (that is, H+implicit D or D+implicit H)    */
     if (TG_FLAG_H_ALREADY_REMOVED & bTautFlags)
     {
-        INP_ATOM_DATA *out_norm_data1 = out_norm_data[TAUT_YES]->at ? out_norm_data[TAUT_YES] :
+        INP_ATOM_DATA* out_norm_data1 = out_norm_data[TAUT_YES]->at ? out_norm_data[TAUT_YES] :
             out_norm_data[TAUT_NON]->at ? out_norm_data[TAUT_NON] : NULL;
         if (out_norm_data1)
         {
@@ -3883,14 +3894,14 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     }
     else
     {
-        num_at_tg = num_atoms = remove_terminal_HDT( num_inp_at, out_at, bFixTermHChrg );
+        num_at_tg = num_atoms = remove_terminal_HDT(num_inp_at, out_at, bFixTermHChrg);
         num_removed_H = num_inp_at - num_atoms;
         t_group_info->tni.nNumRemovedExplicitH = num_removed_H;
-        add_DT_to_num_H( num_atoms, out_at );
+        add_DT_to_num_H(num_atoms, out_at);
     }
     /*fix_odd_things( num_atoms, out_at );*/
 #if ( FIND_RING_SYSTEMS == 1 )
-    MarkRingSystemsInp( out_at, num_atoms, 0 );
+    MarkRingSystemsInp(out_at, num_atoms, 0);
 #endif
     /*  duplicate the preprocessed structure so that all supplied out_norm_data[]->at buffers are filled */
     if (out_at != out_norm_data[TAUT_YES]->at && out_norm_data[TAUT_YES]->at)
@@ -3916,12 +3927,12 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     if (out_norm_data[TAUT_YES]->at && at[TAUT_YES])
     {
         /* final normalization of possibly tautomeric structure */
-        ret = mark_alt_bonds_and_taut_groups( ic, pCG,
-                                              out_norm_data[TAUT_YES]->at,
-                                              out_norm_data[TAUT_YES]->at_fixed_bonds,
-                                              num_atoms, ulMaxTime, t_group_info,
-                                              NULL, NULL,
-                                              nebend, ebend );
+        ret = mark_alt_bonds_and_taut_groups(ic, pCG,
+            out_norm_data[TAUT_YES]->at,
+            out_norm_data[TAUT_YES]->at_fixed_bonds,
+            num_atoms, ulMaxTime, t_group_info,
+            NULL, NULL,
+            nebend, ebend);
         if (ret < 0)
         {
             goto exit_function;/*  out of RAM or other normalization problem */
@@ -3940,16 +3951,16 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         }
         /* mark deleted isolated tautomeric H(+) */
         if (num_taut_at == 1 &&
-             out_norm_data[TAUT_YES]->at[0].at_type == ATT_PROTON &&
-             t_group_info && t_group_info->tni.nNumRemovedProtons == 1)
+            out_norm_data[TAUT_YES]->at[0].at_type == ATT_PROTON &&
+            t_group_info && t_group_info->tni.nNumRemovedProtons == 1)
         {
             out_norm_data[TAUT_YES]->bDeleted = 1;
-            FreeInpAtom( &out_norm_data[TAUT_YES]->at_fixed_bonds );
+            FreeInpAtom(&out_norm_data[TAUT_YES]->at_fixed_bonds);
         }
         else
         {
-            if (( t_group_info->tni.bNormalizationFlags & FLAG_NORM_CONSIDER_TAUT ) &&
-                    out_norm_data[TAUT_YES]->at_fixed_bonds)
+            if ((t_group_info->tni.bNormalizationFlags & FLAG_NORM_CONSIDER_TAUT) &&
+                out_norm_data[TAUT_YES]->at_fixed_bonds)
             {
                 out_norm_data[TAUT_YES]->bTautPreprocessed = 1;
             }
@@ -3969,15 +3980,15 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         out_norm_data[TAUT_YES]->bNormalizationFlags = t_group_info->tni.bNormalizationFlags;
 
         /* create internal sp_ATOM at[] out of out_norm_data[]->at */
-        inp2spATOM( out_norm_data[TAUT_YES]->at, num_inp_at, at[TAUT_YES] );
+        inp2spATOM(out_norm_data[TAUT_YES]->at, num_inp_at, at[TAUT_YES]);
 
         /* set stereo parities to at[]; nUserMode: accept alt. stereo bonds, min ring size */
-        ret = set_stereo_parity( pCG, out_norm_data[TAUT_YES]->at, at[TAUT_YES],
-                                 num_taut_at, num_removed_H_taut,
-                                 &s[TAUT_YES].nMaxNumStereoAtoms,
-                                 &s[TAUT_YES].nMaxNumStereoBonds,
-                                 nUserMode, bPointedEdgeStereo,
-                                 vABParityUnknown, ip->bLooseTSACheck, ip->bStereoAtZz );
+        ret = set_stereo_parity(pCG, out_norm_data[TAUT_YES]->at, at[TAUT_YES],
+            num_taut_at, num_removed_H_taut,
+            &s[TAUT_YES].nMaxNumStereoAtoms,
+            &s[TAUT_YES].nMaxNumStereoBonds,
+            nUserMode, bPointedEdgeStereo,
+            vABParityUnknown, ip->bLooseTSACheck, ip->bStereoAtZz);
 
 #if ( bRELEASE_VERSION == 0 )
         if (0 < ret)
@@ -3990,14 +4001,14 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         }
 #endif
 
-        if (RETURNED_ERROR( ret ))
+        if (RETURNED_ERROR(ret))
         {
             goto exit_function; /*  stereo bond error */
         }
 
         s[TAUT_YES].bMayHaveStereo =
-            ( s[TAUT_YES].nMaxNumStereoAtoms ||
-             s[TAUT_YES].nMaxNumStereoBonds );
+            (s[TAUT_YES].nMaxNumStereoAtoms ||
+                s[TAUT_YES].nMaxNumStereoBonds);
 
         /*
             mark isotopic atoms and atoms that have non-tautomeric
@@ -4005,10 +4016,10 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         */
 
         s[TAUT_YES].num_isotopic_atoms =
-            set_atom_iso_sort_keys( num_taut_at,
-                                    at[TAUT_YES],
-                                    t_group_info,
-                                    &s[TAUT_YES].bHasIsotopicTautGroups );
+            set_atom_iso_sort_keys(num_taut_at,
+                at[TAUT_YES],
+                t_group_info,
+                &s[TAUT_YES].bHasIsotopicTautGroups);
 
         /*
             Prepare tautomeric (if no tautomerism found then prepare non-tautomeric)
@@ -4021,9 +4032,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
                 calculate length of the t-group part of the connection table
          */
 
-        s[TAUT_YES].nLenLinearCTTautomer = CountTautomerGroups( at[TAUT_YES], num_taut_at, t_group_info );
+        s[TAUT_YES].nLenLinearCTTautomer = CountTautomerGroups(at[TAUT_YES], num_taut_at, t_group_info);
 
-        if (RETURNED_ERROR( s[TAUT_YES].nLenLinearCTTautomer ))
+        if (RETURNED_ERROR(s[TAUT_YES].nLenLinearCTTautomer))
         {
             /* added error treatment 9-11-2003 */
             ret = s[TAUT_YES].nLenLinearCTTautomer;
@@ -4037,9 +4048,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         {
             num_at_tg = num_taut_at + t_group_info->num_t_groups;
             /*  ??? -not true- create t_group_info_orig for multiple calls with atom renumbering */
-            make_a_copy_of_t_group_info( t_group_info_orig /* dest*/, t_group_info /* source*/ );
+            make_a_copy_of_t_group_info(t_group_info_orig /* dest*/, t_group_info /* source*/); /* djb-rwth: addressing coverity ID #499544 -- properly used sequence of arguments according to the comment in previous line */
             /*  mark isotopic tautomer groups: calculate t_group->iWeight */
-            s[TAUT_YES].nLenLinearCTIsotopicTautomer = set_tautomer_iso_sort_keys( t_group_info );
+            s[TAUT_YES].nLenLinearCTIsotopicTautomer = set_tautomer_iso_sort_keys(t_group_info);
             if (s[TAUT_YES].nLenLinearCTIsotopicTautomer < 0)
             {
                 /* ??? -error cannot happen- error has happened; no breakpoint here */
@@ -4049,24 +4060,24 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         }
 
         /*  new variable: s[TAUT_YES].nLenCT introduced 7-22-2002 */
-        GetCanonLengths( num_taut_at, at[TAUT_YES], &s[TAUT_YES], t_group_info );
+        GetCanonLengths(num_taut_at, at[TAUT_YES], &s[TAUT_YES], t_group_info);
     }
 
     if (out_norm_data[TAUT_NON]->at &&
-         out_norm_data[TAUT_YES]->at &&
-         at[TAUT_NON] &&
-         !s[TAUT_YES].nLenLinearCTTautomer)
+        out_norm_data[TAUT_YES]->at &&
+        at[TAUT_NON] &&
+        !s[TAUT_YES].nLenLinearCTTautomer)
     {
         /* the structure is non-tautomeric: use tautomeric treatment results only for it */
-        inchi_free( at[TAUT_NON] );
+        inchi_free(at[TAUT_NON]);
         at[TAUT_NON] = NULL;
     }
 
     else if (!out_norm_data[TAUT_NON]->at &&
-         out_norm_data[TAUT_YES]->at &&
-         !at[TAUT_NON] &&
-         at[TAUT_YES] &&
-         !s[TAUT_YES].nLenLinearCTTautomer)
+        out_norm_data[TAUT_YES]->at &&
+        !at[TAUT_NON] &&
+        at[TAUT_YES] &&
+        !s[TAUT_YES].nLenLinearCTTautomer)
     {
         /* requested tautomeric; found non-tautomeric; it is located in out_norm_data[TAUT_YES]->at */
         out_norm_data[TAUT_YES]->bTautomeric = 0;
@@ -4076,15 +4087,15 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     {
         /* the structure needs non-tautomeric treatment:
         final normalization of non-tautomeric structure */
-        ret = mark_alt_bonds_and_taut_groups( ic, pCG,
-                                              out_norm_data[TAUT_NON]->at,
-                                              NULL,
-                                              num_atoms,
-                                              ulMaxTime,
-                                              NULL,
-                                              &bTautFlags,
-                                              &bTautFlagsDone,
-                                              nebend, ebend );
+        ret = mark_alt_bonds_and_taut_groups(ic, pCG,
+            out_norm_data[TAUT_NON]->at,
+            NULL,
+            num_atoms,
+            ulMaxTime,
+            NULL,
+            &bTautFlags,
+            &bTautFlagsDone,
+            nebend, ebend);
         if (ret < 0)
         {
             goto exit_function;  /*  out of RAM or other normalization problem */
@@ -4096,34 +4107,34 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         out_norm_data[TAUT_NON]->bNormalizationFlags = 0;
 
         /* create internal sp_ATOM at[] out of out_norm_data[]->at */
-        inp2spATOM( out_norm_data[TAUT_NON]->at, num_inp_at, at[TAUT_NON] );
+        inp2spATOM(out_norm_data[TAUT_NON]->at, num_inp_at, at[TAUT_NON]);
 
         /* set stereo parities to at[]; nUserMode: accept alt. stereo bonds, min ring size */
-        ret = set_stereo_parity( pCG, out_norm_data[TAUT_NON]->at,
-                                 at[TAUT_NON], num_atoms, num_removed_H,
-                                 &s[TAUT_NON].nMaxNumStereoAtoms,
-                                 &s[TAUT_NON].nMaxNumStereoBonds, nUserMode,
-                                 bPointedEdgeStereo, vABParityUnknown,
-                                 ip->bLooseTSACheck, ip->bStereoAtZz );
+        ret = set_stereo_parity(pCG, out_norm_data[TAUT_NON]->at,
+            at[TAUT_NON], num_atoms, num_removed_H,
+            &s[TAUT_NON].nMaxNumStereoAtoms,
+            &s[TAUT_NON].nMaxNumStereoBonds, nUserMode,
+            bPointedEdgeStereo, vABParityUnknown,
+            ip->bLooseTSACheck, ip->bStereoAtZz);
 #if ( bRELEASE_VERSION == 0 )
         if (0 < ret)
         {
             bExtract |= EXTR_HAS_ATOM_WITH_DEFINED_PARITY;
         }
 #endif
-        if (RETURNED_ERROR( ret ))
+        if (RETURNED_ERROR(ret))
         {
             goto exit_function; /*  stereo bond error */
         }
-        s[TAUT_NON].bMayHaveStereo = ( s[TAUT_NON].nMaxNumStereoAtoms ||
-                                      s[TAUT_NON].nMaxNumStereoBonds );
+        s[TAUT_NON].bMayHaveStereo = (s[TAUT_NON].nMaxNumStereoAtoms ||
+            s[TAUT_NON].nMaxNumStereoBonds);
 
         /*
          * mark isotopic atoms and atoms that have non-tautomeric
          * isotopic terminal hydrogen atoms 1H, 2H(D), 3H(T)
          */
-        s[TAUT_NON].num_isotopic_atoms = set_atom_iso_sort_keys( num_atoms, at[TAUT_NON], NULL, NULL );
-        GetCanonLengths( num_atoms, at[TAUT_NON], &s[TAUT_NON], NULL );
+        s[TAUT_NON].num_isotopic_atoms = set_atom_iso_sort_keys(num_atoms, at[TAUT_NON], NULL, NULL);
+        GetCanonLengths(num_atoms, at[TAUT_NON], &s[TAUT_NON], NULL);
         out_norm_data[TAUT_NON]->bTautomeric = 0;
     }
 
@@ -4137,34 +4148,34 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         bHasIsotopicAtoms = bHasIsotopicAtoms
             ||
             (s[TAUT_YES].nLenLinearCTTautomer > 0 && t_group_info &&
-            ( (0 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[0]) ||
-              (1 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[1]) ||
-              (2 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[2])
-            )); /* djb-rwth: addressing LLVM warning */
+                ((0 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[0]) ||
+                    (1 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[1]) ||
+                    (2 < NUM_H_ISOTOPES && t_group_info->tni.nNumRemovedProtonsIsotopic[2])
+                    )); /* djb-rwth: addressing LLVM warning */
     }
     bHasIsotopicAtoms = bHasIsotopicAtoms
         ||
         (s[TAUT_YES].nLenIsotopicEndpoints > 1 && t_group_info &&
-        ( t_group_info->bTautFlagsDone & ( TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE ) )); /* djb-rwth: addressing LLVM warning */
+            (t_group_info->bTautFlagsDone & (TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE))); /* djb-rwth: addressing LLVM warning */
 
     /* default mode */
-    if (!( nUserMode & REQ_MODE_DEFAULT ))
+    if (!(nUserMode & REQ_MODE_DEFAULT))
     {
         /*  default */
         nUserMode |= REQ_MODE_DEFAULT;
     }
 
     /* adjust the mode to the reality */
-    if (( nUserMode & REQ_MODE_ISO ) && !bHasIsotopicAtoms)
+    if ((nUserMode & REQ_MODE_ISO) && !bHasIsotopicAtoms)
     {
         nUserMode ^= REQ_MODE_ISO;
         nUserMode |= REQ_MODE_NON_ISO;  /*  at least one is needed */
     }
-    if (( nUserMode & REQ_MODE_STEREO ) && ( nUserMode & REQ_MODE_ISO ))
+    if ((nUserMode & REQ_MODE_STEREO) && (nUserMode & REQ_MODE_ISO))
     {
         nUserMode |= REQ_MODE_ISO_STEREO;
     }
-    if (( nUserMode & REQ_MODE_STEREO ) && !( nUserMode & REQ_MODE_NON_ISO ))
+    if ((nUserMode & REQ_MODE_STEREO) && !(nUserMode & REQ_MODE_NON_ISO))
     {
         nUserMode ^= REQ_MODE_STEREO;
     }
@@ -4176,43 +4187,43 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             nUserMode ^= REQ_MODE_ISO_STEREO;
     }
 
-    if (( nUserMode & REQ_MODE_BASIC ) &&
-        ( !out_norm_data[TAUT_NON]->at || !ppINChI[TAUT_NON] ||
-            !ppINChI_Aux[TAUT_NON] || !at[TAUT_NON] ))
+    if ((nUserMode & REQ_MODE_BASIC) &&
+        (!out_norm_data[TAUT_NON]->at || !ppINChI[TAUT_NON] ||
+            !ppINChI_Aux[TAUT_NON] || !at[TAUT_NON]))
     {
         nUserMode ^= REQ_MODE_BASIC;
     }
-    if (( nUserMode & REQ_MODE_TAUT ) &&
-        ( !out_norm_data[TAUT_YES]->at || !ppINChI[TAUT_YES] ||
-            !ppINChI_Aux[TAUT_YES] || !at[TAUT_YES] ))
+    if ((nUserMode & REQ_MODE_TAUT) &&
+        (!out_norm_data[TAUT_YES]->at || !ppINChI[TAUT_YES] ||
+            !ppINChI_Aux[TAUT_YES] || !at[TAUT_YES]))
     {
         nUserMode ^= REQ_MODE_TAUT;
     }
 
-    switch ((int) nUserMode & ( REQ_MODE_BASIC | REQ_MODE_TAUT ))
+    switch ((int)nUserMode & (REQ_MODE_BASIC | REQ_MODE_TAUT))
     {
-        case REQ_MODE_BASIC:
-            n1 = TAUT_NON;
-            n2 = TAUT_NON;
-            break;
-        case REQ_MODE_TAUT:
-            n1 = TAUT_YES;
-            n2 = TAUT_YES;
-            break;
-        case ( REQ_MODE_BASIC | REQ_MODE_TAUT ):
-            n1 = TAUT_NON;
-            n2 = TAUT_YES;
-            break;
-        default:
-            ret = -3;
-            goto exit_function; /*  program error: inconsistent nUserMode or missing taut/non-taut allocation */ /*   <BRKPT> */
+    case REQ_MODE_BASIC:
+        n1 = TAUT_NON;
+        n2 = TAUT_NON;
+        break;
+    case REQ_MODE_TAUT:
+        n1 = TAUT_YES;
+        n2 = TAUT_YES;
+        break;
+    case (REQ_MODE_BASIC | REQ_MODE_TAUT):
+        n1 = TAUT_NON;
+        n2 = TAUT_YES;
+        break;
+    default:
+        ret = -3;
+        goto exit_function; /*  program error: inconsistent nUserMode or missing taut/non-taut allocation */ /*   <BRKPT> */
     }
 
     /*
         Obtain all non-stereo canonical numberings
     */
 
-    if (( nUserMode & REQ_MODE_NON_ISO ) && !( nUserMode & REQ_MODE_ISO ))
+    if ((nUserMode & REQ_MODE_NON_ISO) && !(nUserMode & REQ_MODE_ISO))
     {
         /* added for special non-isotopic test mode 2004-10-04 */
         if (t_group_info)
@@ -4220,11 +4231,11 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             t_group_info->bIgnoreIsotopic = 1;
             if (t_group_info->nIsotopicEndpointAtomNumber)
             {
-                t_group_info->nIsotopicEndpointAtomNumber[0] = inchi_min( 1, t_group_info->nIsotopicEndpointAtomNumber[0] );
+                t_group_info->nIsotopicEndpointAtomNumber[0] = inchi_min(1, t_group_info->nIsotopicEndpointAtomNumber[0]);
             }
-            memset( t_group_info->num_iso_H, 0, sizeof( t_group_info->num_iso_H ) ); /* djb-rwth: memset_s C11/Annex K variant? */
-            memset( t_group_info->tni.nNumRemovedProtonsIsotopic, 0, sizeof( t_group_info->tni.nNumRemovedProtonsIsotopic ) ); /* djb-rwth: memset_s C11/Annex K variant? */
-            t_group_info->bTautFlagsDone &= ~( TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE );
+            memset(t_group_info->num_iso_H, 0, sizeof(t_group_info->num_iso_H)); /* djb-rwth: memset_s C11/Annex K variant? */
+            memset(t_group_info->tni.nNumRemovedProtonsIsotopic, 0, sizeof(t_group_info->tni.nNumRemovedProtonsIsotopic)); /* djb-rwth: memset_s C11/Annex K variant? */
+            t_group_info->bTautFlagsDone &= ~(TG_FLAG_FOUND_ISOTOPIC_H_DONE | TG_FLAG_FOUND_ISOTOPIC_ATOM_DONE);
         }
         for (i = 0; i < TAUT_NUM; i++)
         {
@@ -4238,9 +4249,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         bHasIsotopicAtoms = 0;
     }
 
-    ret = GetBaseCanonRanking( ic, num_atoms, num_at_tg, at,
-                               t_group_info, s, pBCN, ulMaxTime,
-                               pCG, bFixIsoFixedH, LargeMolecules );
+    ret = GetBaseCanonRanking(ic, num_atoms, num_at_tg, at,
+        t_group_info, s, pBCN, ulMaxTime,
+        pCG, bFixIsoFixedH, LargeMolecules);
 
     if (ret < 0)
     {
@@ -4248,7 +4259,7 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     }
 #if ( bRELEASE_VERSION == 0 && FIND_CANON_NE_EQUITABLE == 1 )
     /* Debug only: find whether canonical equivalence is different from equitable partition */
-    if (bCanonIsFinerThanEquitablePartition( num_atoms, at[n1], pBCN->ftcn[TAUT_NON].nSymmRankCt ))
+    if (bCanonIsFinerThanEquitablePartition(num_atoms, at[n1], pBCN->ftcn[TAUT_NON].nSymmRankCt))
     {
         bExtract |= EXTR_CANON_NE_EQUITABLE;
     }
@@ -4257,11 +4268,11 @@ int  Create_INChI( CANON_GLOBALS *pCG,
     /* added for special non-isotopic test mode 2004-10-04 */
     if (!pBCN->ftcn[n1].PartitionCt.Rank)
     {
-        n1 = ALT_TAUT( n1 );
+        n1 = ALT_TAUT(n1);
     }
     if (!pBCN->ftcn[n2].PartitionCt.Rank)
     {
-        n2 = ALT_TAUT( n2 );
+        n2 = ALT_TAUT(n2);
     }
     if (n1 > n2)
     {
@@ -4273,82 +4284,82 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         Obtain stereo canonical numberings
     */
 
-    for (i = n2; i >= n1 && !RETURNED_ERROR( ret ); i--)
+    for (i = n2; i >= n1 && !RETURNED_ERROR(ret); i--)
     {
-        memset( pCS, 0, sizeof( *pCS ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(pCS, 0, sizeof(*pCS)); /* djb-rwth: memset_s C11/Annex K variant? */
 
         switch (i)
         {
-            case TAUT_NON:
-                /*  non-tautomeric */
-                /* djb-rwth: removing redundant code */
-                nMode = ( s[i].nLenLinearCTTautomer == 0 ) ? CANON_MODE_CT : CANON_MODE_TAUT;
-                nMode |= ( bHasIsotopicAtoms && ( nUserMode & REQ_MODE_ISO ) ) ? CANON_MODE_ISO : 0;
-                nMode |= ( s[TAUT_NON].bMayHaveStereo && ( nUserMode & REQ_MODE_STEREO ) ) ? CANON_MODE_STEREO : 0;
-                nMode |= ( bHasIsotopicAtoms && s[TAUT_NON].bMayHaveStereo && ( nUserMode & REQ_MODE_ISO_STEREO ) ) ? CANON_MODE_ISO_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_NOEQ_STEREO ) ? CMODE_NOEQ_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_REDNDNT_STEREO ) ? CMODE_REDNDNT_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_NO_ALT_SBONDS ) ? CMODE_NO_ALT_SBONDS : 0;
-                if (( nMode & CANON_MODE_STEREO ) == CANON_MODE_STEREO ||
-                    ( nMode & CANON_MODE_ISO_STEREO ) == CANON_MODE_ISO_STEREO)
-                {
-                    nMode |= ( nUserMode & REQ_MODE_RELATIVE_STEREO ) ? CMODE_RELATIVE_STEREO : 0;
-                    nMode |= ( nUserMode & REQ_MODE_RACEMIC_STEREO ) ? CMODE_RACEMIC_STEREO : 0;
-                    nMode |= ( nUserMode & REQ_MODE_SC_IGN_ALL_UU ) ? CMODE_SC_IGN_ALL_UU : 0;
-                    nMode |= ( nUserMode & REQ_MODE_SB_IGN_ALL_UU ) ? CMODE_SB_IGN_ALL_UU : 0;
-                }
-                if ((ret = AllocateCS( pCS, num_atoms, num_atoms, s[TAUT_NON].nLenCT, s[TAUT_NON].nLenCTAtOnly,
-                    s[TAUT_NON].nLenLinearCTStereoDble, s[TAUT_NON].nMaxNumStereoBonds,
-                    s[TAUT_NON].nLenLinearCTStereoCarb, s[TAUT_NON].nMaxNumStereoAtoms,
-                    0, 0, s[TAUT_NON].nLenIsotopic, nMode, pBCN ))) /* djb-rwth: addressing LLVM warning */
-                {
-                    goto exit_function;
-                }
-                *pCS2 = *pCS;
-                break;
-            case TAUT_YES: /*  tautomeric */
-                /* djb-rwth: removing redundant code */
-                nMode = ( s[i].nLenLinearCTTautomer == 0 ) ? CANON_MODE_CT : CANON_MODE_TAUT;
-                nMode |= ( bHasIsotopicAtoms && ( nUserMode & REQ_MODE_ISO ) ) ? CANON_MODE_ISO : 0;
-                nMode |= ( s[TAUT_YES].bMayHaveStereo && ( nUserMode & REQ_MODE_STEREO ) ) ? CANON_MODE_STEREO : 0;
-                nMode |= ( bHasIsotopicAtoms && s[TAUT_YES].bMayHaveStereo && ( nUserMode & REQ_MODE_ISO_STEREO ) ) ? CANON_MODE_ISO_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_NOEQ_STEREO ) ? CMODE_NOEQ_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_REDNDNT_STEREO ) ? CMODE_REDNDNT_STEREO : 0;
-                nMode |= ( nUserMode & REQ_MODE_NO_ALT_SBONDS ) ? CMODE_NO_ALT_SBONDS : 0;
-                if (( nMode & CANON_MODE_STEREO ) == CANON_MODE_STEREO ||
-                    ( nMode & CANON_MODE_ISO_STEREO ) == CANON_MODE_ISO_STEREO)
-                {
-                    nMode |= ( nUserMode & REQ_MODE_RELATIVE_STEREO ) ? CMODE_RELATIVE_STEREO : 0;
-                    nMode |= ( nUserMode & REQ_MODE_RACEMIC_STEREO ) ? CMODE_RACEMIC_STEREO : 0;
-                    nMode |= ( nUserMode & REQ_MODE_SC_IGN_ALL_UU ) ? CMODE_SC_IGN_ALL_UU : 0;
-                    nMode |= ( nUserMode & REQ_MODE_SB_IGN_ALL_UU ) ? CMODE_SB_IGN_ALL_UU : 0;
-                }
-                if ((ret = AllocateCS( pCS, num_atoms, num_at_tg, s[TAUT_YES].nLenCT, s[TAUT_YES].nLenCTAtOnly,
-                    s[TAUT_YES].nLenLinearCTStereoDble, s[TAUT_YES].nMaxNumStereoBonds,
-                    s[TAUT_YES].nLenLinearCTStereoCarb, s[TAUT_YES].nMaxNumStereoAtoms,
-                    s[TAUT_YES].nLenLinearCTTautomer, s[TAUT_YES].nLenLinearCTIsotopicTautomer,
-                    s[TAUT_YES].nLenIsotopic, nMode, pBCN ))) /* djb-rwth: addressing LLVM warning */
-                {
-                    goto exit_function;
-                }
-                *pCS2 = *pCS;
-                break;
+        case TAUT_NON:
+            /*  non-tautomeric */
+            /* djb-rwth: removing redundant code */
+            nMode = (s[i].nLenLinearCTTautomer == 0) ? CANON_MODE_CT : CANON_MODE_TAUT;
+            nMode |= (bHasIsotopicAtoms && (nUserMode & REQ_MODE_ISO)) ? CANON_MODE_ISO : 0;
+            nMode |= (s[TAUT_NON].bMayHaveStereo && (nUserMode & REQ_MODE_STEREO)) ? CANON_MODE_STEREO : 0;
+            nMode |= (bHasIsotopicAtoms && s[TAUT_NON].bMayHaveStereo && (nUserMode & REQ_MODE_ISO_STEREO)) ? CANON_MODE_ISO_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_NOEQ_STEREO) ? CMODE_NOEQ_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_REDNDNT_STEREO) ? CMODE_REDNDNT_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_NO_ALT_SBONDS) ? CMODE_NO_ALT_SBONDS : 0;
+            if ((nMode & CANON_MODE_STEREO) == CANON_MODE_STEREO ||
+                (nMode & CANON_MODE_ISO_STEREO) == CANON_MODE_ISO_STEREO)
+            {
+                nMode |= (nUserMode & REQ_MODE_RELATIVE_STEREO) ? CMODE_RELATIVE_STEREO : 0;
+                nMode |= (nUserMode & REQ_MODE_RACEMIC_STEREO) ? CMODE_RACEMIC_STEREO : 0;
+                nMode |= (nUserMode & REQ_MODE_SC_IGN_ALL_UU) ? CMODE_SC_IGN_ALL_UU : 0;
+                nMode |= (nUserMode & REQ_MODE_SB_IGN_ALL_UU) ? CMODE_SB_IGN_ALL_UU : 0;
+            }
+            if ((ret = AllocateCS(pCS, num_atoms, num_atoms, s[TAUT_NON].nLenCT, s[TAUT_NON].nLenCTAtOnly,
+                s[TAUT_NON].nLenLinearCTStereoDble, s[TAUT_NON].nMaxNumStereoBonds,
+                s[TAUT_NON].nLenLinearCTStereoCarb, s[TAUT_NON].nMaxNumStereoAtoms,
+                0, 0, s[TAUT_NON].nLenIsotopic, nMode, pBCN))) /* djb-rwth: addressing LLVM warning */
+            {
+                goto exit_function;
+            }
+            *pCS2 = *pCS;
+            break;
+        case TAUT_YES: /*  tautomeric */
+            /* djb-rwth: removing redundant code */
+            nMode = (s[i].nLenLinearCTTautomer == 0) ? CANON_MODE_CT : CANON_MODE_TAUT;
+            nMode |= (bHasIsotopicAtoms && (nUserMode & REQ_MODE_ISO)) ? CANON_MODE_ISO : 0;
+            nMode |= (s[TAUT_YES].bMayHaveStereo && (nUserMode & REQ_MODE_STEREO)) ? CANON_MODE_STEREO : 0;
+            nMode |= (bHasIsotopicAtoms && s[TAUT_YES].bMayHaveStereo && (nUserMode & REQ_MODE_ISO_STEREO)) ? CANON_MODE_ISO_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_NOEQ_STEREO) ? CMODE_NOEQ_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_REDNDNT_STEREO) ? CMODE_REDNDNT_STEREO : 0;
+            nMode |= (nUserMode & REQ_MODE_NO_ALT_SBONDS) ? CMODE_NO_ALT_SBONDS : 0;
+            if ((nMode & CANON_MODE_STEREO) == CANON_MODE_STEREO ||
+                (nMode & CANON_MODE_ISO_STEREO) == CANON_MODE_ISO_STEREO)
+            {
+                nMode |= (nUserMode & REQ_MODE_RELATIVE_STEREO) ? CMODE_RELATIVE_STEREO : 0;
+                nMode |= (nUserMode & REQ_MODE_RACEMIC_STEREO) ? CMODE_RACEMIC_STEREO : 0;
+                nMode |= (nUserMode & REQ_MODE_SC_IGN_ALL_UU) ? CMODE_SC_IGN_ALL_UU : 0;
+                nMode |= (nUserMode & REQ_MODE_SB_IGN_ALL_UU) ? CMODE_SB_IGN_ALL_UU : 0;
+            }
+            if ((ret = AllocateCS(pCS, num_atoms, num_at_tg, s[TAUT_YES].nLenCT, s[TAUT_YES].nLenCTAtOnly,
+                s[TAUT_YES].nLenLinearCTStereoDble, s[TAUT_YES].nMaxNumStereoBonds,
+                s[TAUT_YES].nLenLinearCTStereoCarb, s[TAUT_YES].nMaxNumStereoAtoms,
+                s[TAUT_YES].nLenLinearCTTautomer, s[TAUT_YES].nLenLinearCTIsotopicTautomer,
+                s[TAUT_YES].nLenIsotopic, nMode, pBCN))) /* djb-rwth: addressing LLVM warning */
+            {
+                goto exit_function;
+            }
+            *pCS2 = *pCS;
+            break;
         }
 
         /* 2009-12-05 */
-        nMode |= ( nUserMode & REQ_MODE_DIFF_UU_STEREO ) ? REQ_MODE_DIFF_UU_STEREO : 0;
+        nMode |= (nUserMode & REQ_MODE_DIFF_UU_STEREO) ? REQ_MODE_DIFF_UU_STEREO : 0;
         /* 2009-12-05 */
 
         /*  settings */
         pCS->lNumDecreasedCT = -1;
         pCS->bDoubleBondSquare = DOUBLE_BOND_NEIGH_LIST ? 2 : 0;  /*  2 => special mode */
-        pCS->bIgnoreIsotopic = !( ( s[TAUT_NON].num_isotopic_atoms ||
+        pCS->bIgnoreIsotopic = !((s[TAUT_NON].num_isotopic_atoms ||
             s[TAUT_YES].num_isotopic_atoms ||
-            s[TAUT_YES].bHasIsotopicTautGroups ) ||
-            ( nUserMode & REQ_MODE_NON_ISO ) ||
-                                               !( nUserMode & REQ_MODE_ISO ) );
+            s[TAUT_YES].bHasIsotopicTautGroups) ||
+            (nUserMode & REQ_MODE_NON_ISO) ||
+            !(nUserMode & REQ_MODE_ISO));
 
-        if (( nUserMode & REQ_MODE_NON_ISO ) && !( nUserMode & REQ_MODE_ISO ))
+        if ((nUserMode & REQ_MODE_NON_ISO) && !(nUserMode & REQ_MODE_ISO))
         {
             pCS->bIgnoreIsotopic = 1; /* 10-04-2004 */
         }
@@ -4357,10 +4368,10 @@ int  Create_INChI( CANON_GLOBALS *pCG,
         {
             /* tautomeric */
             pCS->t_group_info = t_group_info; /*  ??? make a copy or reuse ???  */
-            pCS->t_group_info->bIgnoreIsotopic = !( s[TAUT_YES].bHasIsotopicTautGroups ||
-                ( nUserMode & REQ_MODE_NON_ISO ) ||
-                                                   !( nUserMode & REQ_MODE_ISO ) );
-            if (( nUserMode & REQ_MODE_NON_ISO ) && !( nUserMode & REQ_MODE_ISO ))
+            pCS->t_group_info->bIgnoreIsotopic = !(s[TAUT_YES].bHasIsotopicTautGroups ||
+                (nUserMode & REQ_MODE_NON_ISO) ||
+                !(nUserMode & REQ_MODE_ISO));
+            if ((nUserMode & REQ_MODE_NON_ISO) && !(nUserMode & REQ_MODE_ISO))
             {
                 pCS->t_group_info->bIgnoreIsotopic = 1; /* 10-04-2004 */
             }
@@ -4379,9 +4390,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
          *   '6' A    1|2|4|8|16 Output All
          */
 
-        /*
-            The last canonicalization step
-        */
+         /*
+             The last canonicalization step
+         */
 
         if (pBCN)
         {
@@ -4389,29 +4400,29 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             pCS->NeighList = NULL;
             pCS->pBCN = pBCN;
 
-            ret = Canon_INChI( ic,
-                               num_atoms,
-                               i ? num_at_tg : num_atoms,
-                               at[i], pCS,
-                               pCG,
-                               nMode, i );
+            ret = Canon_INChI(ic,
+                num_atoms,
+                i ? num_at_tg : num_atoms,
+                at[i], pCS,
+                pCG,
+                nMode, i);
         }
         else
         {
             /* old way */
-            pCS->NeighList = CreateNeighList( num_atoms,
-                                               i ? num_at_tg : num_atoms,
-                                               at[i],
-                                               pCS->bDoubleBondSquare,
-                                               pCS->t_group_info );
+            pCS->NeighList = CreateNeighList(num_atoms,
+                i ? num_at_tg : num_atoms,
+                at[i],
+                pCS->bDoubleBondSquare,
+                pCS->t_group_info);
             pCS->pBCN = NULL;
 
-            ret = Canon_INChI( ic,
-                               num_atoms,
-                               i ? num_at_tg : num_atoms,
-                               at[i], pCS,
-                               pCG,
-                               nMode, i );
+            ret = Canon_INChI(ic,
+                num_atoms,
+                i ? num_at_tg : num_atoms,
+                at[i], pCS,
+                pCG,
+                nMode, i);
         }
 
         pINChI = ppINChI[i];      /* pointers to already allocated still empty InChI */
@@ -4442,15 +4453,15 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             pINChI_Aux->bNormalizationFlags = out_norm_data[i]->bNormalizationFlags;
 
             /*  may return an error or a warning */
-            ret = FillOutINChI( pINChI, pINChI_Aux,
-                               num_atoms, i ? num_at_tg : num_atoms,
-                               i ? num_removed_H_taut : num_removed_H, at[i],
-                               out_norm_data[i]->at, pCS,
-                               pCG,
-                               i, nUserMode,
-                               pStrErrStruct, ip->bNoWarnings );
+            ret = FillOutINChI(pINChI, pINChI_Aux,
+                num_atoms, i ? num_at_tg : num_atoms,
+                i ? num_removed_H_taut : num_removed_H, at[i],
+                out_norm_data[i]->at, pCS,
+                pCG,
+                i, nUserMode,
+                pStrErrStruct, ip->bNoWarnings);
 
-            if (RETURNED_ERROR( ret ))
+            if (RETURNED_ERROR(ret))
             {
                 /* Failure in FillOutINChI() */
                 pINChI->nErrorCode = ret;
@@ -4462,9 +4473,9 @@ int  Create_INChI( CANON_GLOBALS *pCG,
 
 #if ( bRELEASE_VERSION == 0 )
                 if (pINChI->Stereo &&
-                    ( pINChI->Stereo->nCompInv2Abs && !pINChI->Stereo->bTrivialInv ) ||
-                     pINChI->StereoIsotopic &&
-                     ( pINChI->StereoIsotopic->nCompInv2Abs && !pINChI->StereoIsotopic->bTrivialInv ))
+                    (pINChI->Stereo->nCompInv2Abs && !pINChI->Stereo->bTrivialInv) ||
+                    pINChI->StereoIsotopic &&
+                    (pINChI->StereoIsotopic->nCompInv2Abs && !pINChI->StereoIsotopic->bTrivialInv))
                 {
                     bExtract |= EXTR_NON_TRIVIAL_STEREO;
                 }
@@ -4480,11 +4491,11 @@ int  Create_INChI( CANON_GLOBALS *pCG,
                 pINChI->bExtract |= pCS->bExtract;
 #endif
 
-                ret2 = CheckCanonNumberingCorrectness( num_atoms,
-                                                      i ? num_at_tg : num_atoms,
-                                                      at[i], pCS,
-                                                      pCG,
-                                                      i, pStrErrStruct );
+                ret2 = CheckCanonNumberingCorrectness(num_atoms,
+                    i ? num_at_tg : num_atoms,
+                    at[i], pCS,
+                    pCG,
+                    i, pStrErrStruct);
                 if (ret2 && pINChI_Aux) /* djb-rwth: fixing a NULL pointer dereference */
                 {
                     pINChI->nErrorCode = ret2;
@@ -4494,8 +4505,8 @@ int  Create_INChI( CANON_GLOBALS *pCG,
             }
         }
 
-        FreeNeighList( pCS->NeighList );
-        DeAllocateCS( pCS2 );
+        FreeNeighList(pCS->NeighList);
+        DeAllocateCS(pCS2);
 
         pINChI = NULL;      /* avoid dangling pointers */
         pINChI_Aux = NULL;  /* avoid dangling pointers */
@@ -4509,14 +4520,14 @@ int  Create_INChI( CANON_GLOBALS *pCG,
 
 exit_function:
 
-    DeAllocBCN( pBCN );
+    DeAllocBCN(pBCN);
     if (at[TAUT_YES])
     {
-        inchi_free( at[TAUT_YES] );
+        inchi_free(at[TAUT_YES]);
     }
     if (at[TAUT_NON])
     {
-        inchi_free( at[TAUT_NON] );
+        inchi_free(at[TAUT_NON]);
     }
     if (ti_out)
     {
@@ -4524,13 +4535,29 @@ exit_function:
     }
     else
     {
-        free_t_group_info( t_group_info );
+        /* free_t_group_info(t_group_info); */
+        if (t_group_info) /* djb-rwth: fixing oss-fuzz issue #42537161/70475 */
+        {
+            if (t_group_info->nEndpointAtomNumber)
+            {
+                inchi_free(t_group_info->nEndpointAtomNumber);
+            }
+            if (t_group_info->tGroupNumber)
+            {
+                inchi_free(t_group_info->tGroupNumber);
+            }
+            if (t_group_info->nIsotopicEndpointAtomNumber)
+            {
+                inchi_free(t_group_info->nIsotopicEndpointAtomNumber);
+            }
+            memset(t_group_info, 0, sizeof(*t_group_info)); /* djb-rwth: memset_s C11/Annex K variant? */
+        }
     }
-    free_t_group_info( t_group_info_orig );
+    free_t_group_info(t_group_info_orig);
 
     if (ebend)
     {
-        inchi_free( ebend );
+        inchi_free(ebend);
     }
 
     return ret;
@@ -4539,20 +4566,20 @@ exit_function:
 
 /****************************************************************************/
 #ifndef COMPILE_ANSI_ONLY /* { */
-int GetAtomOrdNbrInCanonOrd( struct tagCANON_GLOBALS *pCG,
-                             inp_ATOM *norm_at,
-                             AT_NUMB *nAtomOrdNbr,
-                             AT_NUMB *nOrigAtNosInCanonOrd,
-                             int num_at )
+int GetAtomOrdNbrInCanonOrd(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* norm_at,
+    AT_NUMB* nAtomOrdNbr,
+    AT_NUMB* nOrigAtNosInCanonOrd,
+    int num_at)
 {
-    AT_NUMB   *nCanonNbr, *nOrigAtNos, *nOrigAtNosOrd;
+    AT_NUMB* nCanonNbr, * nOrigAtNos, * nOrigAtNosOrd;
     int          i, ret;
 
     ret = 0;
 
-    nCanonNbr = (AT_NUMB *) inchi_calloc( num_at, sizeof( nCanonNbr[0] ) );
-    nOrigAtNos = (AT_NUMB *) inchi_calloc( num_at, sizeof( nOrigAtNos[0] ) );
-    nOrigAtNosOrd = (AT_NUMB *) inchi_calloc( num_at, sizeof( nOrigAtNosOrd[0] ) );
+    nCanonNbr = (AT_NUMB*)inchi_calloc(num_at, sizeof(nCanonNbr[0]));
+    nOrigAtNos = (AT_NUMB*)inchi_calloc(num_at, sizeof(nOrigAtNos[0]));
+    nOrigAtNosOrd = (AT_NUMB*)inchi_calloc(num_at, sizeof(nOrigAtNosOrd[0]));
 
     if (!nCanonNbr || !nOrigAtNos || !nAtomOrdNbr || !nOrigAtNosOrd)
     {
@@ -4561,16 +4588,16 @@ int GetAtomOrdNbrInCanonOrd( struct tagCANON_GLOBALS *pCG,
     }
     for (i = 0; i < num_at; i++)
     {
-        nCanonNbr[i] = nAtomOrdNbr[i] = nOrigAtNosOrd[i] = (AT_NUMB) i;
+        nCanonNbr[i] = nAtomOrdNbr[i] = nOrigAtNosOrd[i] = (AT_NUMB)i;
         nOrigAtNos[i] = norm_at[i].orig_at_number;
     }
 
     /*  get nCanonNbr[]: canon. numbers-1 in order of increasing original atom numbers */
     pCG->m_pn_RankForSort = nOrigAtNosInCanonOrd;
-    inchi_qsort( pCG, nCanonNbr, num_at, sizeof( nCanonNbr[0] ), CompRank );
+    inchi_qsort(pCG, nCanonNbr, num_at, sizeof(nCanonNbr[0]), CompRank);
     /*  get nOrigAtNosOrd[]: norm_atom ord. numbers the same order of increasing original atom numbers */
     pCG->m_pn_RankForSort = nOrigAtNos;
-    inchi_qsort( pCG, nOrigAtNosOrd, num_at, sizeof( nOrigAtNosOrd[0] ), CompRank );
+    inchi_qsort(pCG, nOrigAtNosOrd, num_at, sizeof(nOrigAtNosOrd[0]), CompRank);
 
     /*  check whether the 2 sets of origiginal atom numbers have identical elements */
     for (i = 0; i < num_at; i++)
@@ -4583,7 +4610,7 @@ int GetAtomOrdNbrInCanonOrd( struct tagCANON_GLOBALS *pCG,
     }
     for (i = 0; i < num_at; i++)
     {
-        nAtomOrdNbr[(int) nCanonNbr[i]] = nOrigAtNosOrd[i];
+        nAtomOrdNbr[(int)nCanonNbr[i]] = nOrigAtNosOrd[i];
     }
 
     /*
@@ -4594,15 +4621,15 @@ int GetAtomOrdNbrInCanonOrd( struct tagCANON_GLOBALS *pCG,
 exit_function:
     if (nCanonNbr)
     {
-        inchi_free( nCanonNbr );
+        inchi_free(nCanonNbr);
     }
     if (nOrigAtNos)
     {
-        inchi_free( nOrigAtNos );
+        inchi_free(nOrigAtNos);
     }
     if (nOrigAtNosOrd)
     {
-        inchi_free( nOrigAtNosOrd );
+        inchi_free(nOrigAtNosOrd);
     }
 
     return ret;
@@ -4610,40 +4637,40 @@ exit_function:
 
 
 /****************************************************************************/
-int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
-                         inp_ATOM *norm_at,
-                         INF_ATOM_DATA *inf_norm_at_data,
-                         int init_num_at,
-                         int bIsotopic,
-                         INChI *pINChI,
-                         INChI_Aux *pINChI_Aux,
-                         int bAbcNumbers,
-                         INCHI_MODE nMode )
+int FillOutCanonInfAtom(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* norm_at,
+    INF_ATOM_DATA* inf_norm_at_data,
+    int init_num_at,
+    int bIsotopic,
+    INChI* pINChI,
+    INChI_Aux* pINChI_Aux,
+    int bAbcNumbers,
+    INCHI_MODE nMode)
 {
     int          i, j, m, n, num_stereo, k, c, ret, len_str, len, atw; /* djb-rwth: removing redundant variable */
     int          next_atom[MAX_CUMULENE_LEN + 1], best_next_atom[MAX_CUMULENE_LEN + 1], cur_atom;
     int          next_neigh[MAX_CUMULENE_LEN + 1], best_next_neigh[MAX_CUMULENE_LEN + 1], best_len;
     int          num_iso_H[NUM_H_ISOTOPES];
-    char        *str;
+    char* str;
     AT_NUMB      g, e;
     int          num_at = pINChI->nNumberOfAtoms;
-    int          nNumberOfTGroups = ( pINChI->lenTautomer && pINChI->nTautomer && pINChI->nTautomer[0] ) ? (int) pINChI->nTautomer[0] : 0;
-    AT_NUMB     *nOrigAtNosInCanonOrd;
-    INChI_Stereo *Stereo;
-    AT_NUMB     *nConstitEquNumbers;
-    AT_NUMB     *nConstitEquTGroupNumbers;
-    S_CHAR      *t_parity = NULL;
-    AT_NUMB     *nNumber = NULL;
+    int          nNumberOfTGroups = (pINChI->lenTautomer && pINChI->nTautomer && pINChI->nTautomer[0]) ? (int)pINChI->nTautomer[0] : 0;
+    AT_NUMB* nOrigAtNosInCanonOrd;
+    INChI_Stereo* Stereo;
+    AT_NUMB* nConstitEquNumbers;
+    AT_NUMB* nConstitEquTGroupNumbers;
+    S_CHAR* t_parity = NULL;
+    AT_NUMB* nNumber = NULL;
     int          bIncludeIsotopicH;
 
-    AT_NUMB     *nNormAtNosInCanonOrd;
-    int( *MakeNumber )( char*, int, const char*, int ) = bAbcNumbers ? MakeAbcNumber : MakeDecNumber;
-    int bRel = ( 0 != ( nMode & ( REQ_MODE_RELATIVE_STEREO ) ) );
-    int bRac = ( 0 != ( nMode & ( REQ_MODE_RACEMIC_STEREO ) ) );
+    AT_NUMB* nNormAtNosInCanonOrd;
+    int(*MakeNumber)(char*, int, const char*, int) = bAbcNumbers ? MakeAbcNumber : MakeDecNumber;
+    int bRel = (0 != (nMode & (REQ_MODE_RELATIVE_STEREO)));
+    int bRac = (0 != (nMode & (REQ_MODE_RACEMIC_STEREO)));
     int bRelRac = bRel || bRac;
     int bDoDisplaySp3 = 1;
 
-    inf_ATOM *inf_norm_at = inf_norm_at_data ? inf_norm_at_data->at : NULL;
+    inf_ATOM* inf_norm_at = inf_norm_at_data ? inf_norm_at_data->at : NULL;
 
     ret = 0;
     /* djb-rwth: removing redundant code */
@@ -4656,23 +4683,23 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     /* prepare removeable protons and H info */
     inf_norm_at_data->nNumRemovedProtons = pINChI_Aux->nNumRemovedProtons;
 
-    MakeRemovedProtonsString( pINChI_Aux->nNumRemovedProtons, pINChI_Aux->nNumRemovedIsotopicH, NULL, bIsotopic,
-                              inf_norm_at_data->szRemovedProtons, &inf_norm_at_data->num_removed_iso_H );
+    MakeRemovedProtonsString(pINChI_Aux->nNumRemovedProtons, pINChI_Aux->nNumRemovedIsotopicH, NULL, bIsotopic,
+        inf_norm_at_data->szRemovedProtons, &inf_norm_at_data->num_removed_iso_H);
 
     /* fill out info atom */
-    if (bIsotopic && !( pINChI->nNumberOfIsotopicAtoms || pINChI->nNumberOfIsotopicTGroups ||
-        (pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1) )) /* djb-rwth: addressing LLVM warning */
+    if (bIsotopic && !(pINChI->nNumberOfIsotopicAtoms || pINChI->nNumberOfIsotopicTGroups ||
+        (pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1))) /* djb-rwth: addressing LLVM warning */
     {
         bIsotopic = 0;
     }
 
     Stereo = bIsotopic ? pINChI->StereoIsotopic :
         pINChI->Stereo;
-    bDoDisplaySp3 = ( NULL != Stereo ) && ( Stereo->nNumberOfStereoCenters > 0 );
+    bDoDisplaySp3 = (NULL != Stereo) && (Stereo->nNumberOfStereoCenters > 0);
 
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
     if (bDoDisplaySp3 && bRelRac && Stereo->nNumberOfStereoCenters < 2 &&
-        ( Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF( Stereo->t_parity[0] ) ))
+        (Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF(Stereo->t_parity[0])))
     {
         bDoDisplaySp3 = 0;
         if (Stereo->nCompInv2Abs)
@@ -4682,7 +4709,7 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 #endif
     /* flag has stereo */
-    if (( NULL != Stereo ) && ( bDoDisplaySp3 || Stereo->nNumberOfStereoBonds > 0 ))
+    if ((NULL != Stereo) && (bDoDisplaySp3 || Stereo->nNumberOfStereoBonds > 0))
     {
         inf_norm_at_data->StereoFlags |= INF_STEREO;
     }
@@ -4713,7 +4740,7 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         }
         if (bRelRac)
         {
-            inf_norm_at_data->StereoFlags |= ( Stereo->nCompInv2Abs > 0 ) ? INF_STEREO_NORM : INF_STEREO_INV;
+            inf_norm_at_data->StereoFlags |= (Stereo->nCompInv2Abs > 0) ? INF_STEREO_NORM : INF_STEREO_INV;
         }
     }
     if (bDoDisplaySp3 && Stereo->nCompInv2Abs < 0 && !bRelRac)
@@ -4740,11 +4767,11 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         pINChI_Aux->nConstitEquNumbers;
     nConstitEquTGroupNumbers = bIsotopic ? pINChI_Aux->nConstitEquIsotopicTGroupNumbers :
         pINChI_Aux->nConstitEquTGroupNumbers;
-    memset( inf_norm_at, 0, init_num_at * sizeof( inf_norm_at[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(inf_norm_at, 0, init_num_at * sizeof(inf_norm_at[0])); /* djb-rwth: memset_s C11/Annex K variant? */
 
     /*  obtain norm_at[] atom numbers (from zero) in order of canonical numbers */
-    nNormAtNosInCanonOrd = (AT_NUMB *) inchi_calloc( num_at, sizeof( nNormAtNosInCanonOrd[0] ) );
-    if ((ret = GetAtomOrdNbrInCanonOrd( pCG, norm_at, nNormAtNosInCanonOrd, nOrigAtNosInCanonOrd, num_at ))) /* djb-rwth: addressing LLVM warning */
+    nNormAtNosInCanonOrd = (AT_NUMB*)inchi_calloc(num_at, sizeof(nNormAtNosInCanonOrd[0]));
+    if ((ret = GetAtomOrdNbrInCanonOrd(pCG, norm_at, nNormAtNosInCanonOrd, nOrigAtNosInCanonOrd, num_at))) /* djb-rwth: addressing LLVM warning */
     {
         goto exit_function;
     }
@@ -4752,12 +4779,12 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     /*  atom canonical and equivalence numbers > 0 */
     for (i = 0; i < num_at; i++)
     {
-        j = (int) nNormAtNosInCanonOrd[i];
+        j = (int)nNormAtNosInCanonOrd[i];
         if (j < 0 || j >= num_at)
         {
             continue;
         }
-        inf_norm_at[j].nCanonNbr = (AT_NUMB) ( i + 1 );
+        inf_norm_at[j].nCanonNbr = (AT_NUMB)(i + 1);
         inf_norm_at[j].nCanonEquNbr = nConstitEquNumbers[i];
 #ifdef DISPLAY_DEBUG_DATA
         inf_norm_at[j].nDebugData = 0;
@@ -4777,13 +4804,13 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
          */
         for (g = 1, i = 1; g <= nNumberOfTGroups; g++)
         {
-            n = (int) pINChI->nTautomer[i] - INCHI_T_NUM_MOVABLE; /*  number of atoms in t-group */
-            e = nConstitEquTGroupNumbers[(int) g - 1];
+            n = (int)pINChI->nTautomer[i] - INCHI_T_NUM_MOVABLE; /*  number of atoms in t-group */
+            e = nConstitEquTGroupNumbers[(int)g - 1];
             /*  bypass number of hydrogen atoms, negative charges, ... */
             for (i += INCHI_T_NUM_MOVABLE + 1, j = 0; j < n && i < pINChI->lenTautomer; j++, i++)
             {
                 /*  scan canonical numbers of atoms within the atom t-group */
-                k = (int) nNormAtNosInCanonOrd[(int) pINChI->nTautomer[i] - 1];
+                k = (int)nNormAtNosInCanonOrd[(int)pINChI->nTautomer[i] - 1];
                 inf_norm_at[k].nTautGroupCanonNbr = g;
                 inf_norm_at[k].nTautGroupEquNbr = e;
             }
@@ -4795,12 +4822,12 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         }
     }
     /* atoms that may exchange isotopic H */
-    if (bIsotopic && pINChI->nPossibleLocationsOfIsotopicH && ( n = (int) pINChI->nPossibleLocationsOfIsotopicH[0] ))
+    if (bIsotopic && pINChI->nPossibleLocationsOfIsotopicH && (n = (int)pINChI->nPossibleLocationsOfIsotopicH[0]))
     {
         for (i = 1; i < n; i++)
         {
-            j = (int) pINChI->nPossibleLocationsOfIsotopicH[i];
-            k = (int) nNormAtNosInCanonOrd[j - 1];
+            j = (int)pINChI->nPossibleLocationsOfIsotopicH[i];
+            k = (int)nNormAtNosInCanonOrd[j - 1];
             if (!inf_norm_at[k].nTautGroupCanonNbr)
             {
                 inf_norm_at[k].cFlags |= AT_FLAG_ISO_H_POINT;
@@ -4824,15 +4851,15 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 #endif
 
-    /*  Fill inf_at[i] field 'at_string': 
+    /*  Fill inf_at[i] field 'at_string':
         write isotopic mass, chemical element symbols and hydrogens, charge, radical, canon. numbers
     */
-    len_str = sizeof( inf_norm_at[0].at_string );
+    len_str = sizeof(inf_norm_at[0].at_string);
     for (i = 0; i < init_num_at; i++)
     {
         str = inf_norm_at[i].at_string;
         len = 0;
-        bIncludeIsotopicH = bIsotopic && !inf_norm_at[i].nTautGroupCanonNbr && !( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT );
+        bIncludeIsotopicH = bIsotopic && !inf_norm_at[i].nTautGroupCanonNbr && !(inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT);
         /*  isotopic mass */
         atw = 0;
         if (norm_at[i].iso_atw_diff && bIsotopic)
@@ -4844,15 +4871,15 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
             else
             {
                 if (norm_at[i].el_number == PERIODIC_NUMBER_H && norm_at[i].chem_bonds_valence == 1 &&
-                      !norm_at[i].charge && !norm_at[i].radical && !norm_at[i].num_H &&
-                       ( inf_norm_at[j = (int) norm_at[i].neighbor[0]].nTautGroupCanonNbr || ( inf_norm_at[j].cFlags & AT_FLAG_ISO_H_POINT ) ))
+                    !norm_at[i].charge && !norm_at[i].radical && !norm_at[i].num_H &&
+                    (inf_norm_at[j = (int)norm_at[i].neighbor[0]].nTautGroupCanonNbr || (inf_norm_at[j].cFlags & AT_FLAG_ISO_H_POINT)))
                 {
                     ; /* do not set isotopic mass of an exchangeable proton */
                 }
                 else
                 {
-                    atw = get_atomic_mass( norm_at[i].elname );
-                    atw += ( norm_at[i].iso_atw_diff > 0 ) ? norm_at[i].iso_atw_diff - 1 : norm_at[i].iso_atw_diff;
+                    atw = get_atomic_mass(norm_at[i].elname);
+                    atw += (norm_at[i].iso_atw_diff > 0) ? norm_at[i].iso_atw_diff - 1 : norm_at[i].iso_atw_diff;
                     /*len += sprintf( str+len, "^%d", atw );*/
                 }
             }
@@ -4868,7 +4895,7 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
             {
                 len += sprintf(str + len, "^%d", atw);
             }
-            if (strcmp( norm_at[i].elname, "Zz" )&& strcmp( norm_at[i].elname, "Zy" ))
+            if (strcmp(norm_at[i].elname, "Zz") && strcmp(norm_at[i].elname, "Zy"))
             {
                 len += sprintf(str + len, "%s", norm_at[i].elname);
             }
@@ -4890,14 +4917,14 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
             num_iso_H[j] = norm_at[i].num_iso_H[j];
         }
         /* n = number of implicit H to display */
-        for (j = num_at, n = (int) norm_at[i].num_H; j < init_num_at; j++)
+        for (j = num_at, n = (int)norm_at[i].num_H; j < init_num_at; j++)
         {
             /*  subtract number of removed terminal */
             /*  H atoms from the total number of H atoms */
-            if (i == (int) norm_at[j].neighbor[0])
+            if (i == (int)norm_at[j].neighbor[0])
             {
                 n -= 1; /* found explicit H => decrement number of implicit H */
-                m = (int) norm_at[j].iso_atw_diff - 1;
+                m = (int)norm_at[j].iso_atw_diff - 1;
                 if (0 <= m && m < NUM_H_ISOTOPES)
                 {
                     /*  subtract number of removed terminal isotopic H */
@@ -4953,14 +4980,14 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         }
         if (norm_at[i].el_number == PERIODIC_NUMBER_H && str[0] == str[1])
         {
-            char *q;
+            char* q;
             if (!str[2])
             {
                 str[1] = '2';  /* quick fix: replace HH with H2 */
             }
             else
             {
-                if (isdigit( UCINT str[2] ) && ( n = strtol( str + 2, &q, 10 ) ) && !q[0])
+                if (isdigit(UCINT str[2]) && (n = strtol(str + 2, &q, 10)) && !q[0])
                 {
                     len = 1 + sprintf(str + 1, "%d", n + 1);
                 }
@@ -4972,13 +4999,13 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         }
         */
         /*  charge */
-        if (abs( norm_at[i].charge ) > 1)
+        if (abs(norm_at[i].charge) > 1)
         {
             len += sprintf(str + len, "%+d", norm_at[i].charge);
         }
         else
         {
-            if (abs( norm_at[i].charge ) == 1)
+            if (abs(norm_at[i].charge) == 1)
             {
                 len += sprintf(str + len, "%s", norm_at[i].charge > 0 ? "+" : "-");
             }
@@ -4993,25 +5020,25 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 
     /*  Stereogenic centers */
-    if (bDoDisplaySp3 && Stereo && 0 < ( num_stereo = Stereo->nNumberOfStereoCenters ))
+    if (bDoDisplaySp3 && Stereo && 0 < (num_stereo = Stereo->nNumberOfStereoCenters))
     {
         for (i = 0; i < num_stereo; i++)
         {
-            j = (int) nNormAtNosInCanonOrd[(int) nNumber[i] - 1];
+            j = (int)nNormAtNosInCanonOrd[(int)nNumber[i] - 1];
             c = t_parity[i];
             c = c == 1 ? '-' : c == 2 ? '+' : c == 3 ? 'u' : c == 4 ? '?' : '*';
             inf_norm_at[j].cStereoCenterParity = c;
             str = inf_norm_at[j].at_string;
-            len = (int) strlen( str );
-            if (len + 3 < ( int )sizeof( inf_norm_at[0].at_string ))
+            len = (int)strlen(str);
+            if (len + 3 < (int)sizeof(inf_norm_at[0].at_string))
             {
                 str[len++] = '(';
                 str[len++] = inf_norm_at[j].cStereoCenterParity;
                 str[len++] = ')';
                 str[len] = '\0';
                 /*  mark ambuguous stereo center */
-                if (norm_at[j].bAmbiguousStereo && ( c == '+' || c == '-' || c == '?' ) && str[0] != '!' &&
-                     len + 1 < ( int )sizeof( inf_norm_at[0].at_string ))
+                if (norm_at[j].bAmbiguousStereo && (c == '+' || c == '-' || c == '?') && str[0] != '!' &&
+                    len + 1 < (int)sizeof(inf_norm_at[0].at_string))
                 {
                     memmove(str + 1, str, (long long)len + 1); /* djb-rwth: cast operator added */
                     str[0] = '!'; /* output the atom in red color */
@@ -5023,31 +5050,31 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     /*  Stereogenic bonds */
     /*  (cumulenes with odd number of double bonds are stereocenters, */
     /*   and atom parity should be set) */
-    if (Stereo && 0 < ( num_stereo = Stereo->nNumberOfStereoBonds ))
+    if (Stereo && 0 < (num_stereo = Stereo->nNumberOfStereoBonds))
     {
         for (i = 0; i < num_stereo; i++)
         {
             int start_at, bAmbiguousStereoBond = 0; /* djb-rwth: removing redundant variable */
-            j = (int) nNormAtNosInCanonOrd[(int) Stereo->nBondAtom1[i] - 1];
-            k = (int) nNormAtNosInCanonOrd[(int) Stereo->nBondAtom2[i] - 1];
+            j = (int)nNormAtNosInCanonOrd[(int)Stereo->nBondAtom1[i] - 1];
+            k = (int)nNormAtNosInCanonOrd[(int)Stereo->nBondAtom2[i] - 1];
             start_at = j;
             c = Stereo->b_parity[i];
 
             c = c == 1 ? '-' : c == 2 ? '+' : c == 3 ? 'u' : c == 4 ? '?' : '*';
 
             /*  mark ambuguous stereo bond atom(s) */
-            if (norm_at[j].bAmbiguousStereo && ( c == '+' || c == '-' ) &&
-                ( len = strlen( str = inf_norm_at[j].at_string ) + 1 ) < ( int )sizeof( inf_norm_at[0].at_string ) &&
-                  str[0] != '!')
+            if (norm_at[j].bAmbiguousStereo && (c == '+' || c == '-') &&
+                (len = strlen(str = inf_norm_at[j].at_string) + 1) < (int)sizeof(inf_norm_at[0].at_string) &&
+                str[0] != '!')
             {
                 memmove(str + 1, str, len);
                 str[0] = '!'; /* output the atom in red color */
                 bAmbiguousStereoBond++;
             }
 
-            if (norm_at[k].bAmbiguousStereo && ( c == '+' || c == '-' ) &&
-                ( len = strlen( str = inf_norm_at[k].at_string ) + 1 ) < ( int )sizeof( inf_norm_at[0].at_string ) &&
-                  str[0] != '!')
+            if (norm_at[k].bAmbiguousStereo && (c == '+' || c == '-') &&
+                (len = strlen(str = inf_norm_at[k].at_string) + 1) < (int)sizeof(inf_norm_at[0].at_string) &&
+                str[0] != '!')
             {
                 memmove(str + 1, str, len);
                 str[0] = '!'; /* output the atom in red color */
@@ -5068,13 +5095,13 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                 }
                 /* best_len = MAX_CUMULENE_LEN+1; */
                 len = 0; /*  number of bonds in cumulene - 1 */
-                next_atom[len] = (int) norm_at[j].neighbor[n];
+                next_atom[len] = (int)norm_at[j].neighbor[n];
                 next_neigh[len] = n;
                 cur_atom = j;
                 while (next_atom[len] != k && len < MAX_CUMULENE_LEN && 2 == norm_at[next_atom[len]].valence)
                 {
-                    next_neigh[len + 1] = ( (int) norm_at[next_atom[len]].neighbor[0] == cur_atom );
-                    next_atom[len + 1] = (int) norm_at[next_atom[len]].neighbor[next_neigh[len + 1]];
+                    next_neigh[len + 1] = ((int)norm_at[next_atom[len]].neighbor[0] == cur_atom);
+                    next_atom[len + 1] = (int)norm_at[next_atom[len]].neighbor[next_neigh[len + 1]];
                     cur_atom = next_atom[len];
                     len++;
                 }
@@ -5103,8 +5130,8 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                     j = best_next_atom[best_len / 2];
                     inf_norm_at[j].cStereoCenterParity = c;
                     str = inf_norm_at[j].at_string;
-                    len = (int) strlen( str );
-                    if (len + 3 < ( int )sizeof( inf_norm_at[0].at_string ))
+                    len = (int)strlen(str);
+                    if (len + 3 < (int)sizeof(inf_norm_at[0].at_string))
                     {
                         str[len++] = '(';
                         str[len++] = inf_norm_at[j].cStereoCenterParity;
@@ -5140,7 +5167,7 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                     /* djb-rwth: removing redundant code */
                     /*  mark "backward" bond */
                     n = norm_at[j].neighbor[k];
-                    for (k = 0; k < norm_at[n].valence && j != (int) norm_at[n].neighbor[k]; k++)
+                    for (k = 0; k < norm_at[n].valence && j != (int)norm_at[n].neighbor[k]; k++)
                     {
                         ;
                     }
@@ -5172,13 +5199,13 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         if (inf_norm_at[i].nCanonNbr)
         {
             str = inf_norm_at[i].at_string;
-            len = (int) strlen( str );
-            len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nCanonNbr );
-            if (inf_norm_at[i].nCanonEquNbr || inf_norm_at[i].nTautGroupCanonNbr || ( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT ))
+            len = (int)strlen(str);
+            len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nCanonNbr);
+            if (inf_norm_at[i].nCanonEquNbr || inf_norm_at[i].nTautGroupCanonNbr || (inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT))
             {
                 if (inf_norm_at[i].nCanonEquNbr)
                 {
-                    len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nCanonEquNbr );
+                    len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nCanonEquNbr);
                 }
                 else
                 {
@@ -5192,13 +5219,13 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
             /*  tautomeric groups */
             if (inf_norm_at[i].nTautGroupCanonNbr)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nTautGroupCanonNbr );
+                len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nTautGroupCanonNbr);
                 if (inf_norm_at[i].nTautGroupEquNbr)
                 {
-                    len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nTautGroupEquNbr );
+                    len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nTautGroupEquNbr);
                 }
             }
-            if (( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT ) && len + 2 <= len_str)
+            if ((inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT) && len + 2 <= len_str)
             {
                 str[len++] = '/';
                 str[len++] = '*';
@@ -5207,7 +5234,7 @@ int FillOutCanonInfAtom( struct tagCANON_GLOBALS *pCG,
 #ifdef DISPLAY_DEBUG_DATA
             if (inf_norm_at[i].nDebugData)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "`", (int) inf_norm_at[i].nDebugData );
+                len += (*MakeNumber)(str + len, len_str - len, "`", (int)inf_norm_at[i].nDebugData);
             }
 #endif
         }
@@ -5217,7 +5244,7 @@ exit_function:
 
     if (nNormAtNosInCanonOrd)
     {
-        inchi_free( nNormAtNosInCanonOrd );
+        inchi_free(nNormAtNosInCanonOrd);
     }
 
     return ret;
@@ -5225,46 +5252,46 @@ exit_function:
 
 
 /****************************************************************************/
-int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
-                            inp_ATOM *inp_norm_at,
-                            INF_ATOM_DATA *inf_norm_at_data,
-                            AT_NUMB *pStereoFlags,
-                            int init_num_at,
-                            int offset,
-                            int offset_H,
-                            int bIsotopic,
-                            INChI *pINChI,
-                            INChI_Aux *pINChI_Aux,
-                            int bAbcNumbers,
-                            INCHI_MODE nMode )
+int FillOutOneCanonInfAtom(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* inp_norm_at,
+    INF_ATOM_DATA* inf_norm_at_data,
+    AT_NUMB* pStereoFlags,
+    int init_num_at,
+    int offset,
+    int offset_H,
+    int bIsotopic,
+    INChI* pINChI,
+    INChI_Aux* pINChI_Aux,
+    int bAbcNumbers,
+    INCHI_MODE nMode)
 {
     int          i, j, m, n, num_stereo, k, c, ret, len_str, len, atw; /* djb-rwth: removing redundant variable */
     int          next_atom[MAX_CUMULENE_LEN + 1], best_next_atom[MAX_CUMULENE_LEN + 1], cur_atom;
     int          next_neigh[MAX_CUMULENE_LEN + 1], best_next_neigh[MAX_CUMULENE_LEN + 1], best_len, bIncludeIsotopicH;
     int          num_iso_H[NUM_H_ISOTOPES];
-    char        *str;
+    char* str;
     AT_NUMB      g, e;
     int          num_at = pINChI->nNumberOfAtoms;
     int          num_H = init_num_at - num_at; /* number of removed H */
-    int          nNumberOfTGroups = ( pINChI->lenTautomer && pINChI->nTautomer && pINChI->nTautomer[0] ) ? (int) pINChI->nTautomer[0] : 0;
-    AT_NUMB     *nOrigAtNosInCanonOrd;
-    INChI_Stereo *Stereo;
-    AT_NUMB     *nConstitEquNumbers;
-    AT_NUMB     *nConstitEquTGroupNumbers;
-    S_CHAR      *t_parity = NULL;
-    AT_NUMB     *nNumber = NULL;
+    int          nNumberOfTGroups = (pINChI->lenTautomer && pINChI->nTautomer && pINChI->nTautomer[0]) ? (int)pINChI->nTautomer[0] : 0;
+    AT_NUMB* nOrigAtNosInCanonOrd;
+    INChI_Stereo* Stereo;
+    AT_NUMB* nConstitEquNumbers;
+    AT_NUMB* nConstitEquTGroupNumbers;
+    S_CHAR* t_parity = NULL;
+    AT_NUMB* nNumber = NULL;
 
-    AT_NUMB     *nNormAtNosInCanonOrd;
-    int( *MakeNumber )( char*, int, const char*, int ) = bAbcNumbers ? MakeAbcNumber : MakeDecNumber;
-    int bRel = ( 0 != ( nMode & ( REQ_MODE_RELATIVE_STEREO ) ) );
-    int bRac = ( 0 != ( nMode & ( REQ_MODE_RACEMIC_STEREO ) ) );
+    AT_NUMB* nNormAtNosInCanonOrd;
+    int(*MakeNumber)(char*, int, const char*, int) = bAbcNumbers ? MakeAbcNumber : MakeDecNumber;
+    int bRel = (0 != (nMode & (REQ_MODE_RELATIVE_STEREO)));
+    int bRac = (0 != (nMode & (REQ_MODE_RACEMIC_STEREO)));
     int bRelRac = bRel || bRac;
     int bDoDisplaySp3 = 1;
 
-    inf_ATOM *inf_norm_at = ( inf_norm_at_data && inf_norm_at_data->at ) ? inf_norm_at_data->at + offset : NULL;
-    inp_ATOM *norm_at = inp_norm_at ? inp_norm_at + offset : NULL;
-    inf_ATOM *inf_norm_at_H = ( inf_norm_at_data && inf_norm_at_data->at ) ? inf_norm_at_data->at + offset_H : NULL;
-    inp_ATOM *norm_at_H = inp_norm_at ? inp_norm_at + offset_H : NULL;
+    inf_ATOM* inf_norm_at = (inf_norm_at_data && inf_norm_at_data->at) ? inf_norm_at_data->at + offset : NULL;
+    inp_ATOM* norm_at = inp_norm_at ? inp_norm_at + offset : NULL;
+    inf_ATOM* inf_norm_at_H = (inf_norm_at_data && inf_norm_at_data->at) ? inf_norm_at_data->at + offset_H : NULL;
+    inp_ATOM* norm_at_H = inp_norm_at ? inp_norm_at + offset_H : NULL;
 
     ret = 0;
     /* djb-rwth: removing redundant code */
@@ -5282,19 +5309,19 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
     */
 
-    if (bIsotopic && !( pINChI->nNumberOfIsotopicAtoms || pINChI->nNumberOfIsotopicTGroups ||
-        (pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1) )) /* djb-rwth: addressing LLVM warning */
+    if (bIsotopic && !(pINChI->nNumberOfIsotopicAtoms || pINChI->nNumberOfIsotopicTGroups ||
+        (pINChI->nPossibleLocationsOfIsotopicH && pINChI->nPossibleLocationsOfIsotopicH[0] > 1))) /* djb-rwth: addressing LLVM warning */
     {
         bIsotopic = 0;
     }
 
     Stereo = bIsotopic ? pINChI->StereoIsotopic : pINChI->Stereo;
 
-    bDoDisplaySp3 = ( NULL != Stereo ) && ( Stereo->nNumberOfStereoCenters > 0 );
+    bDoDisplaySp3 = (NULL != Stereo) && (Stereo->nNumberOfStereoCenters > 0);
 
 #if ( REL_RAC_STEREO_IGN_1_SC == 1 )
     if (bDoDisplaySp3 && bRelRac && Stereo->nNumberOfStereoCenters < 2 &&
-        ( Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF( Stereo->t_parity[0] ) ))
+        (Stereo->nCompInv2Abs || ATOM_PARITY_ILL_DEF(Stereo->t_parity[0])))
     {
         bDoDisplaySp3 = 0;
         if (Stereo->nCompInv2Abs)
@@ -5304,9 +5331,9 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 #endif
     /* flag has stereo */
-    if (( NULL != Stereo ) && ( bDoDisplaySp3 || Stereo->nNumberOfStereoBonds > 0 ))
+    if ((NULL != Stereo) && (bDoDisplaySp3 || Stereo->nNumberOfStereoBonds > 0))
     {
-        ( *pStereoFlags ) |= INF_STEREO;
+        (*pStereoFlags) |= INF_STEREO;
     }
 
     /*
@@ -5319,22 +5346,22 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         /* inversion changes stereo */
         if (bRel)
         {
-            ( *pStereoFlags ) |= INF_STEREO_REL;
+            (*pStereoFlags) |= INF_STEREO_REL;
         }
         else
         {
             if (bRac)
             {
-                ( *pStereoFlags ) |= INF_STEREO_RAC;
+                (*pStereoFlags) |= INF_STEREO_RAC;
             }
             else
             {
-                ( *pStereoFlags ) |= INF_STEREO_ABS;
+                (*pStereoFlags) |= INF_STEREO_ABS;
             }
         }
         if (bRelRac)
         {
-            ( *pStereoFlags ) |= ( Stereo->nCompInv2Abs > 0 ) ? INF_STEREO_NORM : INF_STEREO_INV;
+            (*pStereoFlags) |= (Stereo->nCompInv2Abs > 0) ? INF_STEREO_NORM : INF_STEREO_INV;
         }
     }
     if (bDoDisplaySp3 && Stereo->nCompInv2Abs < 0 && !bRelRac)
@@ -5347,7 +5374,7 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
     else
     {
-         /* display Output stereo which is Absolute Stereo */
+        /* display Output stereo which is Absolute Stereo */
         if (bDoDisplaySp3)
         {
             nNumber = Stereo->nNumber;
@@ -5362,15 +5389,15 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         pINChI_Aux->nConstitEquNumbers;
     nConstitEquTGroupNumbers = bIsotopic ? pINChI_Aux->nConstitEquIsotopicTGroupNumbers :
         pINChI_Aux->nConstitEquTGroupNumbers;
-    memset( inf_norm_at, 0, num_at * sizeof( inf_norm_at[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(inf_norm_at, 0, num_at * sizeof(inf_norm_at[0])); /* djb-rwth: memset_s C11/Annex K variant? */
     if (num_H > 0)
     {
-        memset( inf_norm_at_H, 0, num_H * sizeof( inf_norm_at[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+        memset(inf_norm_at_H, 0, num_H * sizeof(inf_norm_at[0])); /* djb-rwth: memset_s C11/Annex K variant? */
     }
 
     /*  obtain norm_at[] atom numbers (from zero) in order of canonical numbers */
-    nNormAtNosInCanonOrd = (AT_NUMB *) inchi_calloc( num_at, sizeof( nNormAtNosInCanonOrd[0] ) );
-    if ((ret = GetAtomOrdNbrInCanonOrd( pCG, norm_at, nNormAtNosInCanonOrd, nOrigAtNosInCanonOrd, num_at ))) /* djb-rwth: addressing LLVM warning */
+    nNormAtNosInCanonOrd = (AT_NUMB*)inchi_calloc(num_at, sizeof(nNormAtNosInCanonOrd[0]));
+    if ((ret = GetAtomOrdNbrInCanonOrd(pCG, norm_at, nNormAtNosInCanonOrd, nOrigAtNosInCanonOrd, num_at))) /* djb-rwth: addressing LLVM warning */
     {
         goto exit_function;
     }
@@ -5378,12 +5405,12 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     /*  atom canonical and equivalence numbers > 0 */
     for (i = 0; i < num_at; i++)
     {
-        j = (int) nNormAtNosInCanonOrd[i];
+        j = (int)nNormAtNosInCanonOrd[i];
         if (j < 0 || j >= num_at)
         {
             continue;
         }
-        inf_norm_at[j].nCanonNbr = (AT_NUMB) ( i + 1 );
+        inf_norm_at[j].nCanonNbr = (AT_NUMB)(i + 1);
         inf_norm_at[j].nCanonEquNbr = nConstitEquNumbers[i];
 #ifdef DISPLAY_DEBUG_DATA
         inf_norm_at[j].nDebugData = 0;
@@ -5403,13 +5430,13 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
          */
         for (g = 1, i = 1; g <= nNumberOfTGroups; g++)
         {
-            n = (int) pINChI->nTautomer[i] - INCHI_T_NUM_MOVABLE; /*  number of atoms in t-group */
-            e = nConstitEquTGroupNumbers[(int) g - 1];
+            n = (int)pINChI->nTautomer[i] - INCHI_T_NUM_MOVABLE; /*  number of atoms in t-group */
+            e = nConstitEquTGroupNumbers[(int)g - 1];
             /*  bypass number of hydrogen atoms, negative charges, ... */
             for (i += INCHI_T_NUM_MOVABLE + 1, j = 0; j < n && i < pINChI->lenTautomer; j++, i++)
             {
                 /*  scan canonical numbers of atoms within the atom t-group */
-                k = (int) nNormAtNosInCanonOrd[(int) pINChI->nTautomer[i] - 1];
+                k = (int)nNormAtNosInCanonOrd[(int)pINChI->nTautomer[i] - 1];
                 inf_norm_at[k].nTautGroupCanonNbr = g;
                 inf_norm_at[k].nTautGroupEquNbr = e;
             }
@@ -5421,12 +5448,12 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         }
     }
     /* atoms that may exchange isotopic H */
-    if (bIsotopic && pINChI->nPossibleLocationsOfIsotopicH && ( n = (int) pINChI->nPossibleLocationsOfIsotopicH[0] ))
+    if (bIsotopic && pINChI->nPossibleLocationsOfIsotopicH && (n = (int)pINChI->nPossibleLocationsOfIsotopicH[0]))
     {
         for (i = 1; i < n; i++)
         {
-            j = (int) pINChI->nPossibleLocationsOfIsotopicH[i];
-            k = (int) nNormAtNosInCanonOrd[j - 1];
+            j = (int)pINChI->nPossibleLocationsOfIsotopicH[i];
+            k = (int)nNormAtNosInCanonOrd[j - 1];
             if (!inf_norm_at[k].nTautGroupCanonNbr)
             {
                 inf_norm_at[k].cFlags |= AT_FLAG_ISO_H_POINT;
@@ -5449,17 +5476,17 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 #endif
 
-    /*	Fill inf_at[i] field 'at_string': 
-        write isotopic mass, chemical element symbols and hydrogens, charge, radical, canon.numbers 
+    /*	Fill inf_at[i] field 'at_string':
+        write isotopic mass, chemical element symbols and hydrogens, charge, radical, canon.numbers
     */
-    len_str = sizeof( inf_norm_at[0].at_string );
+    len_str = sizeof(inf_norm_at[0].at_string);
     for (i = 0; i < init_num_at; i++)
     {
-        inf_ATOM *cur_inf_norm_at = ( i < num_at ) ? inf_norm_at + i : inf_norm_at_H + i - num_at;
-        inp_ATOM *cur_norm_at = ( i < num_at ) ? norm_at + i : norm_at_H + i - num_at;
+        inf_ATOM* cur_inf_norm_at = (i < num_at) ? inf_norm_at + i : inf_norm_at_H + i - num_at;
+        inp_ATOM* cur_norm_at = (i < num_at) ? norm_at + i : norm_at_H + i - num_at;
         str = cur_inf_norm_at->at_string;
         len = 0;
-        bIncludeIsotopicH = bIsotopic && ( i >= num_at || (!inf_norm_at[i].nTautGroupCanonNbr && !( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT )) ); /* djb-rwth: addressing LLVM warning */
+        bIncludeIsotopicH = bIsotopic && (i >= num_at || (!inf_norm_at[i].nTautGroupCanonNbr && !(inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT))); /* djb-rwth: addressing LLVM warning */
         /*  isotopic mass */
         atw = 0;
         if (cur_norm_at) /* djb-rwth: fixing a NULL pointer dereference */
@@ -5616,25 +5643,25 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     }
 
     /*  Stereogenic centers */
-    if (bDoDisplaySp3 && Stereo && 0 < ( num_stereo = Stereo->nNumberOfStereoCenters ))
+    if (bDoDisplaySp3 && Stereo && 0 < (num_stereo = Stereo->nNumberOfStereoCenters))
     {
         for (i = 0; i < num_stereo; i++)
         {
-            j = (int) nNormAtNosInCanonOrd[(int) nNumber[i] - 1];
+            j = (int)nNormAtNosInCanonOrd[(int)nNumber[i] - 1];
             c = t_parity[i];
             c = c == 1 ? '-' : c == 2 ? '+' : c == 3 ? 'u' : c == 4 ? '?' : '*';
             inf_norm_at[j].cStereoCenterParity = c;
             str = inf_norm_at[j].at_string;
-            len = (int) strlen( str );
-            if (len + 3 < ( int )sizeof( inf_norm_at[0].at_string ))
+            len = (int)strlen(str);
+            if (len + 3 < (int)sizeof(inf_norm_at[0].at_string))
             {
                 str[len++] = '(';
                 str[len++] = inf_norm_at[j].cStereoCenterParity;
                 str[len++] = ')';
                 str[len] = '\0';
                 /*  mark ambuguous stereo center */
-                if (norm_at[j].bAmbiguousStereo && ( c == '+' || c == '-' || c == '?' ) && str[0] != '!' &&
-                     len + 1 < ( int )sizeof( inf_norm_at[0].at_string ))
+                if (norm_at[j].bAmbiguousStereo && (c == '+' || c == '-' || c == '?') && str[0] != '!' &&
+                    len + 1 < (int)sizeof(inf_norm_at[0].at_string))
                 {
                     memmove(str + 1, str, (long long)len + 1); /* djb-rwth: cast operator added */
                     str[0] = '!'; /* output the atom in red color */
@@ -5646,30 +5673,30 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
     /*  Stereogenic bonds */
     /*  (cumulenes with odd number of double bonds are stereocenters, */
     /*   and atom parity should be set) */
-    if (Stereo && 0 < ( num_stereo = Stereo->nNumberOfStereoBonds ))
+    if (Stereo && 0 < (num_stereo = Stereo->nNumberOfStereoBonds))
     {
         for (i = 0; i < num_stereo; i++)
         {
             int start_at, bAmbiguousStereoBond = 0; /* djb-rwth: removing redundant variable */
-            j = (int) nNormAtNosInCanonOrd[(int) Stereo->nBondAtom1[i] - 1];
-            k = (int) nNormAtNosInCanonOrd[(int) Stereo->nBondAtom2[i] - 1];
+            j = (int)nNormAtNosInCanonOrd[(int)Stereo->nBondAtom1[i] - 1];
+            k = (int)nNormAtNosInCanonOrd[(int)Stereo->nBondAtom2[i] - 1];
             start_at = j;
             c = Stereo->b_parity[i];
 
             c = c == 1 ? '-' : c == 2 ? '+' : c == 3 ? 'u' : c == 4 ? '?' : '*';
 
             /*  mark ambuguous stereo bond atom(s) */
-            if (norm_at[j].bAmbiguousStereo && ( c == '+' || c == '-' ) &&
-                ( len = strlen( str = inf_norm_at[j].at_string ) + 1 ) < ( int )sizeof( inf_norm_at[0].at_string ) &&
-                  str[0] != '!')
+            if (norm_at[j].bAmbiguousStereo && (c == '+' || c == '-') &&
+                (len = strlen(str = inf_norm_at[j].at_string) + 1) < (int)sizeof(inf_norm_at[0].at_string) &&
+                str[0] != '!')
             {
                 memmove(str + 1, str, len);
                 str[0] = '!'; /* output the atom in red color */
                 bAmbiguousStereoBond++;
             }
-            if (norm_at[k].bAmbiguousStereo && ( c == '+' || c == '-' ) &&
-                ( len = strlen( str = inf_norm_at[k].at_string ) + 1 ) < ( int )sizeof( inf_norm_at[0].at_string ) &&
-                  str[0] != '!')
+            if (norm_at[k].bAmbiguousStereo && (c == '+' || c == '-') &&
+                (len = strlen(str = inf_norm_at[k].at_string) + 1) < (int)sizeof(inf_norm_at[0].at_string) &&
+                str[0] != '!')
             {
                 memmove(str + 1, str, len);
                 str[0] = '!'; /* output the atom in red color */
@@ -5690,13 +5717,13 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                 }
                 /* best_len = MAX_CUMULENE_LEN+1; */
                 len = 0; /*  number of bonds in cumulene - 1 */
-                next_atom[len] = (int) norm_at[j].neighbor[n] - offset;
+                next_atom[len] = (int)norm_at[j].neighbor[n] - offset;
                 next_neigh[len] = n;
                 cur_atom = j;
                 while (next_atom[len] != k && len < MAX_CUMULENE_LEN && 2 == norm_at[next_atom[len]].valence)
                 {
-                    next_neigh[len + 1] = ( (int) norm_at[next_atom[len]].neighbor[0] - offset == cur_atom );
-                    next_atom[len + 1] = (int) norm_at[next_atom[len]].neighbor[next_neigh[len + 1]] - offset;
+                    next_neigh[len + 1] = ((int)norm_at[next_atom[len]].neighbor[0] - offset == cur_atom);
+                    next_atom[len + 1] = (int)norm_at[next_atom[len]].neighbor[next_neigh[len + 1]] - offset;
                     cur_atom = next_atom[len];
                     len++;
                 }
@@ -5725,8 +5752,8 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                     j = best_next_atom[best_len / 2];
                     inf_norm_at[j].cStereoCenterParity = c;
                     str = inf_norm_at[j].at_string;
-                    len = (int) strlen( str );
-                    if (len + 3 < ( int )sizeof( inf_norm_at[0].at_string ))
+                    len = (int)strlen(str);
+                    if (len + 3 < (int)sizeof(inf_norm_at[0].at_string))
                     {
                         str[len++] = '(';
                         str[len++] = inf_norm_at[j].cStereoCenterParity;
@@ -5762,7 +5789,7 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                     /* djb-rwth: removing redundant code */
                     /*  mark "backward" bond */
                     n = norm_at[j].neighbor[k] - offset;
-                    for (k = 0; k < norm_at[n].valence && j != (int) norm_at[n].neighbor[k] - offset; k++)
+                    for (k = 0; k < norm_at[n].valence && j != (int)norm_at[n].neighbor[k] - offset; k++)
                     {
                         ;
                     }
@@ -5794,18 +5821,18 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         if (inf_norm_at[i].nCanonNbr)
         {
             str = inf_norm_at[i].at_string;
-            len = (int) strlen( str );
+            len = (int)strlen(str);
 #define SHOW_GLOBAL_CANO_NUMBERING 1
 #if SHOW_GLOBAL_CANO_NUMBERING==1
             len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nCanonNbr); // -offset );
 #else
             len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nCanonNbr);
 #endif
-            if (inf_norm_at[i].nCanonEquNbr || inf_norm_at[i].nTautGroupCanonNbr || ( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT ))
+            if (inf_norm_at[i].nCanonEquNbr || inf_norm_at[i].nTautGroupCanonNbr || (inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT))
             {
                 if (inf_norm_at[i].nCanonEquNbr)
                 {
-                    len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nCanonEquNbr );
+                    len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nCanonEquNbr);
                 }
                 else
                 {
@@ -5819,13 +5846,13 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
             /*  tautomeric groups */
             if (inf_norm_at[i].nTautGroupCanonNbr)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nTautGroupCanonNbr );
+                len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nTautGroupCanonNbr);
                 if (inf_norm_at[i].nTautGroupEquNbr)
                 {
-                    len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_norm_at[i].nTautGroupEquNbr );
+                    len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_norm_at[i].nTautGroupEquNbr);
                 }
             }
-            if (( inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT ) && len + 2 <= len_str)
+            if ((inf_norm_at[i].cFlags & AT_FLAG_ISO_H_POINT) && len + 2 <= len_str)
             {
                 str[len++] = '/';
                 str[len++] = '*';
@@ -5834,7 +5861,7 @@ int FillOutOneCanonInfAtom( struct tagCANON_GLOBALS *pCG,
 #ifdef DISPLAY_DEBUG_DATA
             if (inf_norm_at[i].nDebugData)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "`", (int) inf_norm_at[i].nDebugData );
+                len += (*MakeNumber)(str + len, len_str - len, "`", (int)inf_norm_at[i].nDebugData);
             }
 #endif
         }
@@ -5844,7 +5871,7 @@ exit_function:
 
     if (nNormAtNosInCanonOrd)
     {
-        inchi_free( nNormAtNosInCanonOrd );
+        inchi_free(nNormAtNosInCanonOrd);
     }
 
     return ret;
@@ -5852,23 +5879,23 @@ exit_function:
 
 
 /****************************************************************************/
-int FillOutInputInfAtom( inp_ATOM *inp_at,
-                         INF_ATOM_DATA *inf_at_data,
-                         int init_num_at,
-                         int num_removed_H,
-                         int bAdd_DT_to_num_H,
-                         int nNumRemovedProtons,
-                         NUM_H *nNumRemovedProtonsIsotopic,
-                         int bIsotopic,
-                         int bAbcNumbers ) /* djb-rwth: this whole function seems to be useless as it returns the value of a function argument -- init_num_at */
+int FillOutInputInfAtom(inp_ATOM* inp_at,
+    INF_ATOM_DATA* inf_at_data,
+    int init_num_at,
+    int num_removed_H,
+    int bAdd_DT_to_num_H,
+    int nNumRemovedProtons,
+    NUM_H* nNumRemovedProtonsIsotopic,
+    int bIsotopic,
+    int bAbcNumbers) /* djb-rwth: this whole function seems to be useless as it returns the value of a function argument -- init_num_at */
 {
     int          i, j, m, n, ret, len_str, len, atw;
     int          num_iso_H[NUM_H_ISOTOPES];
-    char        *str;
+    char* str;
     int          num_at = init_num_at - num_removed_H;
-    int( *MakeNumber )( char*, int, const char*, int ) = MakeDecNumber;
+    int(*MakeNumber)(char*, int, const char*, int) = MakeDecNumber;
 
-    inf_ATOM *inf_at = inf_at_data ? inf_at_data->at : NULL;
+    inf_ATOM* inf_at = inf_at_data ? inf_at_data->at : NULL;
 
     ret = 0;
 
@@ -5877,23 +5904,23 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         return ret;
     }
 
-    memset( inf_at, 0, init_num_at * sizeof( inf_at[0] ) ); /* djb-rwth: memset_s C11/Annex K variant? */
+    memset(inf_at, 0, init_num_at * sizeof(inf_at[0])); /* djb-rwth: memset_s C11/Annex K variant? */
 
     inf_at_data->nNumRemovedProtons = nNumRemovedProtons;
-    MakeRemovedProtonsString( nNumRemovedProtons, nNumRemovedProtonsIsotopic, NULL, bIsotopic, inf_at_data->szRemovedProtons, NULL );
+    MakeRemovedProtonsString(nNumRemovedProtons, nNumRemovedProtonsIsotopic, NULL, bIsotopic, inf_at_data->szRemovedProtons, NULL);
     /*  atom canonical and equivalence numbers > 0 */
     for (i = 0; i < num_at; i++)
     {
 #if ( DISPLAY_ORIG_AT_NUMBERS == 1 )
         inf_at[i].nCanonNbr = inp_at[i].orig_at_number;
 #else
-        inf_at[i].nCanonNbr = (AT_NUMB) ( i + 1 );
+        inf_at[i].nCanonNbr = (AT_NUMB)(i + 1);
 #endif
     }
-    /*  Fill inf_at[i] field 'at_string': 
-        write isotopic mass, chemical element symbols and hydrogens, charge, radical, canon. numbers 
+    /*  Fill inf_at[i] field 'at_string':
+        write isotopic mass, chemical element symbols and hydrogens, charge, radical, canon. numbers
     */
-    len_str = sizeof( inf_at[0].at_string );
+    len_str = sizeof(inf_at[0].at_string);
     for (i = 0; i < init_num_at; i++)
     {
         str = inf_at[i].at_string;
@@ -5902,8 +5929,8 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         atw = 0;
         if (inp_at[i].iso_atw_diff && bIsotopic)
         {
-            atw = get_atomic_mass( inp_at[i].elname );
-            atw += ( inp_at[i].iso_atw_diff > 0 ) ? inp_at[i].iso_atw_diff - 1 : inp_at[i].iso_atw_diff;
+            atw = get_atomic_mass(inp_at[i].elname);
+            atw += (inp_at[i].iso_atw_diff > 0) ? inp_at[i].iso_atw_diff - 1 : inp_at[i].iso_atw_diff;
             /*len += sprintf( str+len, "^%d", atw );*/
         }
         /*  element name */
@@ -5918,7 +5945,7 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
                 len += sprintf(str + len, "^%d", atw);
             }
             /*if (strcmp( inp_at[i].elname, "Zz" ))*/
-            if (strcmp( inp_at[i].elname, "Zz" ) && strcmp( inp_at[i].elname, "Zy" ))
+            if (strcmp(inp_at[i].elname, "Zz") && strcmp(inp_at[i].elname, "Zy"))
             {
                 len += sprintf(str + len, "%s", inp_at[i].elname);
             }
@@ -5938,14 +5965,14 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         {
             num_iso_H[j] = inp_at[i].num_iso_H[j];
         }
-        for (j = num_at, n = (int) inp_at[i].num_H; j < init_num_at; j++)
+        for (j = num_at, n = (int)inp_at[i].num_H; j < init_num_at; j++)
         {
             /*  subtract number of removed terminal */
             /*  H atoms from the total number of H atoms */
-            if (i == (int) inp_at[j].neighbor[0])
+            if (i == (int)inp_at[j].neighbor[0])
             {
                 n -= 1;
-                m = (int) inp_at[j].iso_atw_diff - 1;
+                m = (int)inp_at[j].iso_atw_diff - 1;
                 if (0 <= m && m < NUM_H_ISOTOPES)
                 {
                     /*  subtract number of removed terminal isotopic */
@@ -5998,14 +6025,14 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         }
         if (inp_at[i].el_number == PERIODIC_NUMBER_H && str[0] == str[1])
         {
-            char *q;
+            char* q;
             if (!str[2])
             {
                 str[1] = '2';  /* quick fix: replace HH with H2 */
             }
             else
             {
-                if (isdigit( UCINT str[2] ) && ( n = strtol( str + 2, &q, 10 ) ) && !q[0])
+                if (isdigit(UCINT str[2]) && (n = strtol(str + 2, &q, 10)) && !q[0])
                 {
                     len = 1 + sprintf(str + 1, "%d", n + 1);
                 }
@@ -6017,13 +6044,13 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         }
         */
         /*  charge */
-        if (abs( inp_at[i].charge ) > 1)
+        if (abs(inp_at[i].charge) > 1)
         {
             len += sprintf(str + len, "%+d", inp_at[i].charge);
         }
         else
         {
-            if (abs( inp_at[i].charge ) == 1)
+            if (abs(inp_at[i].charge) == 1)
             {
                 len += sprintf(str + len, "%s", inp_at[i].charge > 0 ? "+" : "-");
             }
@@ -6044,19 +6071,19 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
         if (inf_at[i].nCanonNbr)
         {
             str = inf_at[i].at_string;
-            len = (int) strlen( str );
-            len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_at[i].nCanonNbr );
+            len = (int)strlen(str);
+            len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_at[i].nCanonNbr);
             if (inf_at[i].nCanonEquNbr || inf_at[i].nTautGroupCanonNbr)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_at[i].nCanonEquNbr );
+                len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_at[i].nCanonEquNbr);
             }
             /*  tautomeric groups */
             if (inf_at[i].nTautGroupCanonNbr)
             {
-                len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_at[i].nTautGroupCanonNbr );
+                len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_at[i].nTautGroupCanonNbr);
                 if (inf_at[i].nTautGroupEquNbr)
                 {
-                    len += ( *MakeNumber )( str + len, len_str - len, "/", (int) inf_at[i].nTautGroupEquNbr ); /* djb-rwth: ignoring LLVM warning: variable used? */
+                    len += (*MakeNumber)(str + len, len_str - len, "/", (int)inf_at[i].nTautGroupEquNbr); /* djb-rwth: ignoring LLVM warning: variable used? */
                 }
             }
         }
@@ -6068,31 +6095,31 @@ int FillOutInputInfAtom( inp_ATOM *inp_at,
 
 
 /****************************************************************************/
-int FillOutInfAtom( struct tagCANON_GLOBALS *pCG,
-                    inp_ATOM *norm_at,
-                    INF_ATOM_DATA *inf_norm_at_data,
-                    int init_num_at,
-                    int num_removed_H,
-                    int bAdd_DT_to_num_H,
-                    int nNumRemovedProtons,
-                    NUM_H *nNumRemovedProtonsIsotopic,
-                    int bIsotopic,
-                    INChI *pINChI,
-                    INChI_Aux *pINChI_Aux,
-                    int bAbcNumbers,
-                    INCHI_MODE nMode )
+int FillOutInfAtom(struct tagCANON_GLOBALS* pCG,
+    inp_ATOM* norm_at,
+    INF_ATOM_DATA* inf_norm_at_data,
+    int init_num_at,
+    int num_removed_H,
+    int bAdd_DT_to_num_H,
+    int nNumRemovedProtons,
+    NUM_H* nNumRemovedProtonsIsotopic,
+    int bIsotopic,
+    INChI* pINChI,
+    INChI_Aux* pINChI_Aux,
+    int bAbcNumbers,
+    INCHI_MODE nMode)
 {
     if (norm_at && inf_norm_at_data && inf_norm_at_data->at)
     {
         if (pINChI && pINChI_Aux)
         {
-            return FillOutCanonInfAtom( pCG, norm_at, inf_norm_at_data, init_num_at, bIsotopic, pINChI,
-                                        pINChI_Aux, bAbcNumbers, nMode );
+            return FillOutCanonInfAtom(pCG, norm_at, inf_norm_at_data, init_num_at, bIsotopic, pINChI,
+                pINChI_Aux, bAbcNumbers, nMode);
         }
         else
         {
-            return FillOutInputInfAtom( norm_at, inf_norm_at_data, init_num_at, num_removed_H, bAdd_DT_to_num_H,
-                                        nNumRemovedProtons, nNumRemovedProtonsIsotopic, bIsotopic, bAbcNumbers );
+            return FillOutInputInfAtom(norm_at, inf_norm_at_data, init_num_at, num_removed_H, bAdd_DT_to_num_H,
+                nNumRemovedProtons, nNumRemovedProtonsIsotopic, bIsotopic, bAbcNumbers);
         }
     }
 
@@ -6101,22 +6128,22 @@ int FillOutInfAtom( struct tagCANON_GLOBALS *pCG,
 
 
 /****************************************************************************/
-int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
-                                  COMP_ATOM_DATA *composite_norm_data,
-                                  INF_ATOM_DATA *inf_norm_at_data,
-                                  int bIsotopic, int bTautomeric,
-                                  PINChI2 *pINChI2,
-                                  PINChI_Aux2 *pINChI_Aux2,
-                                  int bAbcNumbers,
-                                  INCHI_MODE nMode )
+int FillOutCompositeCanonInfAtom(struct tagCANON_GLOBALS* pCG,
+    COMP_ATOM_DATA* composite_norm_data,
+    INF_ATOM_DATA* inf_norm_at_data,
+    int bIsotopic, int bTautomeric,
+    PINChI2* pINChI2,
+    PINChI_Aux2* pINChI_Aux2,
+    int bAbcNumbers,
+    INCHI_MODE nMode)
 {
     int i, num_components, j, k, ret;
-    inp_ATOM *inp_norm_at;
-    INChI     *pINChI;
-    INChI_Aux *pINChI_Aux;
+    inp_ATOM* inp_norm_at;
+    INChI* pINChI;
+    INChI_Aux* pINChI_Aux;
     int      num_inp_at, num_at, num_H, offset, offset_H, next_offset, next_offset_H;
 
-    if (composite_norm_data && inf_norm_at_data && ( bTautomeric == TAUT_INI || (pINChI2 && pINChI_Aux2) )) /* djb-rwth: addressing LLVM warning */
+    if (composite_norm_data && inf_norm_at_data && (bTautomeric == TAUT_INI || (pINChI2 && pINChI_Aux2))) /* djb-rwth: addressing LLVM warning */
     {
         composite_norm_data += bTautomeric;
         inp_norm_at = composite_norm_data->at;
@@ -6125,18 +6152,18 @@ int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
         offset_H = composite_norm_data->num_at - composite_norm_data->num_removed_H;
         if (bTautomeric == TAUT_INI)
         {
-            ret = FillOutInputInfAtom( composite_norm_data->at, inf_norm_at_data, composite_norm_data->num_at,
-                                       composite_norm_data->num_removed_H, 0 /*bAdd_DT_to_num_H*/,
-                                       composite_norm_data->nNumRemovedProtons,
-                                       composite_norm_data->nNumRemovedProtonsIsotopic,
-                                       bIsotopic, bAbcNumbers );
+            ret = FillOutInputInfAtom(composite_norm_data->at, inf_norm_at_data, composite_norm_data->num_at,
+                composite_norm_data->num_removed_H, 0 /*bAdd_DT_to_num_H*/,
+                composite_norm_data->nNumRemovedProtons,
+                composite_norm_data->nNumRemovedProtonsIsotopic,
+                bIsotopic, bAbcNumbers);
             return ret;
         }
         else
         {
             for (i = 0; i < num_components; i++)
             {
-                j = inchi_min( bTautomeric, TAUT_YES );
+                j = inchi_min(bTautomeric, TAUT_YES);
                 /* count isotopic H on removed atoms -- isolated H(+) cations */
                 inf_norm_at_data->nNumRemovedProtons += pINChI_Aux2[i][j]->nNumRemovedProtons;
                 if (bIsotopic && bTautomeric == TAUT_YES)
@@ -6157,7 +6184,7 @@ int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                 }
                 if (!pINChI2[i][j] || !pINChI2[i][j]->nNumberOfAtoms)
                 {
-                    j = ALT_TAUT( j );
+                    j = ALT_TAUT(j);
                     if (!pINChI2[i][j] || !pINChI2[i][j]->nNumberOfAtoms)
                     {
                         continue; /* error ??? */
@@ -6176,12 +6203,12 @@ int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                 {
                     return 0; /* error */
                 }
-                ret = FillOutOneCanonInfAtom( pCG,
-                                               inp_norm_at, inf_norm_at_data,
-                                               inf_norm_at_data->pStereoFlags + i + 1,
-                                               num_inp_at,
-                                               offset, offset_H, bIsotopic,
-                                               pINChI, pINChI_Aux, bAbcNumbers, nMode );
+                ret = FillOutOneCanonInfAtom(pCG,
+                    inp_norm_at, inf_norm_at_data,
+                    inf_norm_at_data->pStereoFlags + i + 1,
+                    num_inp_at,
+                    offset, offset_H, bIsotopic,
+                    pINChI, pINChI_Aux, bAbcNumbers, nMode);
                 if (ret)
                     return 0; /* error */
 
@@ -6190,8 +6217,8 @@ int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
                 offset_H = next_offset_H;
             }
         }
-        MakeRemovedProtonsString( inf_norm_at_data->nNumRemovedProtons, inf_norm_at_data->num_iso_H, NULL, bIsotopic,
-                                  inf_norm_at_data->szRemovedProtons, &inf_norm_at_data->num_removed_iso_H );
+        MakeRemovedProtonsString(inf_norm_at_data->nNumRemovedProtons, inf_norm_at_data->num_iso_H, NULL, bIsotopic,
+            inf_norm_at_data->szRemovedProtons, &inf_norm_at_data->num_removed_iso_H);
     }
 
     return 1;
@@ -6200,23 +6227,23 @@ int FillOutCompositeCanonInfAtom( struct tagCANON_GLOBALS *pCG,
 
 
 /****************************************************************************/
-int CheckCanonNumberingCorrectness( int num_atoms,
-                                    int num_at_tg,
-                                    sp_ATOM *at,
-                                    CANON_STAT *pCS,
-                                    CANON_GLOBALS *pCG,
-                                    int bTautomeric,
-                                    char *pStrErrStruct )
+int CheckCanonNumberingCorrectness(int num_atoms,
+    int num_at_tg,
+    sp_ATOM* at,
+    CANON_STAT* pCS,
+    CANON_GLOBALS* pCG,
+    int bTautomeric,
+    char* pStrErrStruct)
 {
     int i, ret = 0;
-    AT_NUMB *pCanonOrd = NULL;
+    AT_NUMB* pCanonOrd = NULL;
     int nErrorCode = 0;
-    AT_NUMB *pCanonRank; /* canonical ranks of the atoms or tautomeric groups */
-    AT_NUMB *pCanonRankAtoms = NULL;
+    AT_NUMB* pCanonRank; /* canonical ranks of the atoms or tautomeric groups */
+    AT_NUMB* pCanonRankAtoms = NULL;
 
     /* djb-rwth: removing redundant code */
 
-    pCanonRankAtoms = (AT_NUMB *) inchi_calloc( (long long)num_at_tg + 1, sizeof( pCanonRankAtoms[0] ) ); /* djb-rwth: cast operator added */
+    pCanonRankAtoms = (AT_NUMB*)inchi_calloc((long long)num_at_tg + 1, sizeof(pCanonRankAtoms[0])); /* djb-rwth: cast operator added */
 
     /*
         Non-isotopic part
@@ -6229,11 +6256,11 @@ int CheckCanonNumberingCorrectness( int num_atoms,
     {
         for (i = 0; i < num_at_tg; i++)
         {
-            pCanonRank[pCanonOrd[i]] = (AT_NUMB) ( i + 1 );
+            pCanonRank[pCanonOrd[i]] = (AT_NUMB)(i + 1);
         }
-        ret = UpdateFullLinearCT( num_atoms, num_at_tg, at, pCanonRank, pCanonOrd, pCS,
-                                  pCG,
-                                  0 );
+        ret = UpdateFullLinearCT(num_atoms, num_at_tg, at, pCanonRank, pCanonOrd, pCS,
+            pCG,
+            0);
         if (ret /*|| memcmp(pCS->LinearCT, pCS->LinearCT2, sizeof(AT_RANK) * pCS->nLenLinearCT )*/)
         {
             nErrorCode |= WARN_FAILED_STEREO;
@@ -6257,21 +6284,21 @@ int CheckCanonNumberingCorrectness( int num_atoms,
     {
         for (i = 0; i < num_at_tg; i++)
         {
-            pCanonRank[pCanonOrd[i]] = (AT_NUMB) ( i + 1 );
+            pCanonRank[pCanonOrd[i]] = (AT_NUMB)(i + 1);
         }
-        ret = UpdateFullLinearCT( num_atoms, num_at_tg, at, pCanonRank, pCanonOrd, pCS,
-                                  pCG,
-                                  0 );
+        ret = UpdateFullLinearCT(num_atoms, num_at_tg, at, pCanonRank, pCanonOrd, pCS,
+            pCG,
+            0);
         if (ret /*|| memcmp(pCS->LinearCT, pCS->LinearCT2, sizeof(AT_RANK) * pCS->nLenLinearCT )*/)
         {
-            nErrorCode |= ( pCS->nLenCanonOrdIsotopicStereo ? WARN_FAILED_ISOTOPIC_STEREO : WARN_FAILED_ISOTOPIC );
+            nErrorCode |= (pCS->nLenCanonOrdIsotopicStereo ? WARN_FAILED_ISOTOPIC_STEREO : WARN_FAILED_ISOTOPIC);
         }
     }
 
 exit_function:
     if (pCanonRankAtoms)
     {
-        inchi_free( pCanonRankAtoms );
+        inchi_free(pCanonRankAtoms);
     }
 
     if (nErrorCode)

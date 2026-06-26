@@ -364,18 +364,49 @@ int el_number_in_internal_ref_table( const char* elname )
 int get_periodic_table_number( const char* elname )
 {
     int num;
+
+    if (elname == NULL)
+    {
+        return ERR_ELEM;
+    }
+
+    if (strlen(elname) == 0)
+    {
+        return ERR_ELEM;
+    }
+
     /* the single letter (common) elements */
-    if (!elname[1]) {
-        switch (elname[0]) {
-            case 'H': return EL_NUMBER_H; break;
-            case 'B': return EL_NUMBER_B; break;
-            case 'C': return EL_NUMBER_C; break;
-            case 'N': return EL_NUMBER_N; break;
-            case 'O': return EL_NUMBER_O; break;
-            case 'P': return EL_NUMBER_P; break;
-            case 'S': return EL_NUMBER_S; break;
-            case 'F': return EL_NUMBER_F; break;
-            case 'I': return EL_NUMBER_I; break;
+    if (!elname[1]) 
+    {
+        switch (elname[0]) 
+        {
+            case 'H': 
+                return EL_NUMBER_H; 
+                break;
+            case 'B': 
+                return EL_NUMBER_B; 
+                break;
+            case 'C': 
+                return EL_NUMBER_C; 
+                break;
+            case 'N': 
+                return EL_NUMBER_N; 
+                break;
+            case 'O': 
+                return EL_NUMBER_O; 
+                break;
+            case 'P': 
+                return EL_NUMBER_P; 
+                break;
+            case 'S': 
+                return EL_NUMBER_S; 
+                break;
+            case 'F': 
+                return EL_NUMBER_F; 
+                break;
+            case 'I': 
+                return EL_NUMBER_I; 
+                break;
         }
     }
 
@@ -1097,14 +1128,9 @@ int nBondsValToMetal( inp_ATOM* at, int iat )
 /****************************************************************************/
 int num_of_H( inp_ATOM *at, int iat )
 {
-    static int el_number_H;
+    static int el_number_H = (int)EL_NUMBER_H;
     int    i, n, num_explicit_H = 0;
     inp_ATOM *a = at + iat;
-
-    if (!el_number_H)
-    {
-        el_number_H = EL_NUMBER_H;
-    }
 
     for (i = 0; i < a->valence; i++)
     {
@@ -1124,7 +1150,8 @@ int num_of_H( inp_ATOM *at, int iat )
 /****************************************************************************/
 U_CHAR ion_el_group( int el )
 {
-    switch ( el ) {
+    switch ( el ) 
+    {
         case EL_NUMBER_C: /* fallthrough */
 #if ( FIX_REM_ION_PAIRS_Si_BUG == 1 )        
         case EL_NUMBER_SI:
@@ -1481,13 +1508,17 @@ int MakeRemovedProtonsString( int nNumRemovedProtons,
 /****************************************************************************/
 int get_endpoint_valence( U_CHAR el_number )
 {   
-    switch (el_number) {
+    switch (el_number) 
+    {
         case EL_NUMBER_O:  /* fallthrough */
         case EL_NUMBER_S:  
         case EL_NUMBER_SE: 
-        case EL_NUMBER_TE: return 2;
-        case EL_NUMBER_N:  return 3;
-        default: return 0;
+        case EL_NUMBER_TE: 
+            return 2;
+        case EL_NUMBER_N:  
+            return 3;
+        default: 
+            return 0;
     }
 }
 
@@ -1498,10 +1529,14 @@ int get_endpoint_valence( U_CHAR el_number )
 /****************************************************************************/
 int get_endpoint_valence_KET( U_CHAR el_number )
 {
-    switch (el_number) {
-        case EL_NUMBER_C: return 4;
-        case EL_NUMBER_O: return 2;
-        default: return 0;
+    switch (el_number) 
+    {
+        case EL_NUMBER_C: 
+            return 4;
+        case EL_NUMBER_O: 
+            return 2;
+        default: 
+            return 0;
     }
 }
 #endif
@@ -1725,19 +1760,30 @@ void remove_one_lf( char* p )
 int mystrncpy( char *target, const char *source, unsigned maxlen )
 {
     const char *p;
-    unsigned len;
+    unsigned len, source_len;
 
     if (target == NULL || maxlen == 0 || source == NULL)
     {
         return 0;
     }
 
-    if ((p = (const char*)memchr(source, 0, maxlen))) /* djb-rwth: addressing LLVM warning */
-    {    /* maxlen does not include the found zero termination */
+    /* giallu: PR #163 */
+    /* Find actual source length first to limit memchr search */ 
+    source_len = (unsigned)strlen(source);
+
+    if (source_len < maxlen)
+    {
+        /* Source is shorter than maxlen, use actual source length */
+        len = source_len;
+    }
+    else if ((p = (const char*)memchr(source, 0, maxlen))) /* djb-rwth: addressing LLVM warning */
+    {    
+        /* maxlen does not include the found zero termination */
         len = (int) ( p - source );
     }
     else
-    {    /*  reduced length does not include one more byte for zero termination */
+    {    
+        /*  reduced length does not include one more byte for zero termination */
         len = maxlen - 1;
     }
 

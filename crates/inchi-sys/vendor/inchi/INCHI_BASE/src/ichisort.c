@@ -744,41 +744,38 @@ NEIGH_LIST *CreateNeighListFromLinearCT( AT_NUMB *LinearCT, int nLenCT, int num_
     }
     length = num_bonds + num_atoms + 1;
     pp = (NEIGH_LIST*)inchi_calloc(((long long)num_atoms + 1), sizeof(NEIGH_LIST));
-    pAtList = (AT_NUMB*)inchi_malloc(length * sizeof(*pAtList));
-    if (pp) /* djb-rwth: cast operator added; addressing LLVM warning */
+    pAtList = (AT_NUMB*)inchi_malloc(length * sizeof(AT_NUMB));
+    if (pp && pAtList) /* djb-rwth: cast operator added; addressing LLVM warning */
     {
-        if (pAtList) /* djb-rwth: addressing LLVM warning */
+        /*  Create empty connection table */
+        for (i = 1, length = 0; i <= num_atoms; i++)
         {
-            /*  Create empty connection table */
-            for (i = 1, length = 0; i <= num_atoms; i++)
-            {
-                start = length;
-                length += ( valence[i] + 1 );
-                pp[i - 1] = pAtList + start;
-                pp[i - 1][0] = 0;
-            }
-            /*  Fill out the CT */
-            for (i = 1, n_vertex = LinearCT[0] - 1; i < nLenCT; i++)
-            {
-                if (( n_neigh = LinearCT[i] - 1 ) < n_vertex)
-                {
-                    /*  Vertex - neighbor connection */
-                    j = (int) ( ++pp[(int) n_vertex][0] );
-                    pp[(int) n_vertex][j] = n_neigh;
-                    /*  neighbor - vertex connection */
-                    j = (int) ( ++pp[(int) n_neigh][0] );
-                    pp[(int) n_neigh][j] = n_vertex;
-                }
-                else
-                {
-                    if ((int) ( n_vertex = n_neigh ) >= num_atoms)
-                    {
-                        goto exit_function;
-                    }
-                }
-            }
-            err = 0;
+            start = length;
+            length += ( valence[i] + 1 );
+            pp[i - 1] = pAtList + start;
+            pp[i - 1][0] = 0;
         }
+        /*  Fill out the CT */
+        for (i = 1, n_vertex = LinearCT[0] - 1; i < nLenCT; i++)
+        {
+            if (( n_neigh = LinearCT[i] - 1 ) < n_vertex)
+            {
+                /*  Vertex - neighbor connection */
+                j = (int) ( ++pp[(int) n_vertex][0] );
+                pp[(int) n_vertex][j] = n_neigh;
+                /*  neighbor - vertex connection */
+                j = (int) ( ++pp[(int) n_neigh][0] );
+                pp[(int) n_neigh][j] = n_vertex;
+            }
+            else
+            {
+                if ((int) ( n_vertex = n_neigh ) >= num_atoms)
+                {
+                    goto exit_function;
+                }
+            }
+        }
+        err = 0;
     }
 
 exit_function:
@@ -786,7 +783,7 @@ exit_function:
     {
         inchi_free( valence );
     }
-    if (err)
+    if (err) /* djb-rwth: ignoring LLVM warning */
     {
         if (pAtList)
         {
@@ -866,7 +863,7 @@ NEIGH_LIST *CreateNeighList( int num_atoms,
             length += num_t_groups;
         }
         length++; /*  +1 to save number of neighbors */
-        pAtList = (AT_NUMB*)inchi_malloc(length * sizeof(*pAtList));
+        pAtList = (AT_NUMB*)inchi_malloc(length * sizeof(AT_NUMB));
         if (pAtList) /* djb-rwth: addressing LLVM warning */
         {
             if (!bDoubleBondSquare)
@@ -928,10 +925,13 @@ NEIGH_LIST *CreateNeighList( int num_atoms,
         }
         else
         {
+            inchi_free(pAtList); /* djb-rwth: fixing coverity ID #499598 */
             inchi_free( pp );
             return NULL;
         }
-    }
+    } /* djb-rwth: ignoring LLVM warning */
+
+    /* djb-rwth: fixing coverity ID #499598 -- pp uses pAtList values */
 
     return pp; /* djb-rwth: ignoring LLVM warning: since a pointer is returned, memory should be freed in a function which calls *CreateNeighList */
 }

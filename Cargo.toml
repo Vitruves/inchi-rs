@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.77"
 authors = ["Johan H.G. Natter <johan.natter@gmail.com>"]
@@ -14,7 +14,7 @@ keywords = ["inchi", "inchikey", "chemistry", "cheminformatics", "iupac"]
 categories = ["science", "api-bindings"]
 
 [workspace.dependencies]
-inchi-sys = { version = "0.1.2", path = "crates/inchi-sys" }
+inchi-sys = { version = "0.1.3", path = "crates/inchi-sys" }
 
 [profile.release]
 opt-level = 3

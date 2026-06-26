@@ -881,6 +881,7 @@ int inchi_print_nodisplay(FILE* f, const char* lpszFormat, ...)
 
     my_va_start(argList, lpszFormat);
     ret = vfprintf(fi, lpszFormat, argList);
+    va_end(argList);
     return ret;
 }
 
@@ -1334,7 +1335,7 @@ char* inchi_sgets(char* s, int n, INCHI_IOSTREAM* ios)
     if (NULL == inp)
     {
         /* like EOF */
-        return NULL;
+        return NULL; /* djb-rwth: addressing coverity ID #499480 -- inp can be NULL */
     }
 
     p = s;

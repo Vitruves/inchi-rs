@@ -26,6 +26,17 @@ let inchi = out.inchi();                  // "InChI=1S/H2O/h1H2"
 let key = inchikey(inchi)?;               // "XLYOFNOQVPJJNP-UHFFFAOYSA-N"
 ```
 
+Process every record in a multi-molecule SDF file:
+
+```rust
+use inchi::from_sdf;
+
+let sdf = std::fs::read_to_string("molecules.sdf")?;
+for result in from_sdf(&sdf, ()) {
+    println!("{}", result?.inchi());
+}
+```
+
 Build a structure programmatically instead:
 
 ```rust
@@ -44,7 +55,7 @@ The full InChI generation, parsing, and validation API:
 
 | Direction | Functions |
 | --------- | --------- |
-| Structure → InChI | `from_molfile`, `Molecule::to_inchi` |
+| Structure → InChI | `from_molfile`, `from_sdf`, `Molecule::to_inchi` |
 | InChI → structure | `struct_from_inchi`, `struct_from_inchi_ex` (polymers), `struct_from_aux_info` |
 | InChI → InChIKey | `inchikey`, `inchikey_with_hashes` |
 | Convert / validate | `inchi_to_inchi`, `check_inchi`, `check_inchikey` |

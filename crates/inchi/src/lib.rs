@@ -15,9 +15,8 @@
 //! ```
 //! use inchi::{from_molfile, inchikey};
 //!
-//! // A minimal V2000 Molfile for methane (one carbon; hydrogens are implicit).
-//! let methane = "\n  example\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n\
-//!     \x20   0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\nM  END\n";
+//! // In a real application: let molfile = std::fs::read_to_string("methane.mol")?;
+//! let methane = include_str!("../tests/fixtures/methane.mol");
 //!
 //! let result = from_molfile(methane, ())?;
 //! assert_eq!(result.inchi(), "InChI=1S/CH4/h1H4");
@@ -50,7 +49,8 @@
 //! conventions, polymers), see the [`guide`].
 //!
 //! **Structure → InChI**
-//! - [`from_molfile`] — Molfile/SDF text (`MakeINCHIFromMolfileText`).
+//! - [`from_molfile`] — single Molfile or single SDF record (`MakeINCHIFromMolfileText`).
+//! - [`from_sdf`] — iterate over all records in a multi-record SDF string.
 //! - [`Molecule::to_inchi`] — a programmatically built structure (`GetINCHI`,
 //!   or `GetINCHIEx` when [polymer units](Molecule::add_polymer_unit) are present).
 //!
@@ -165,6 +165,48 @@ pub fn from_molfile(molfile: impl AsRef<str>, options: impl Into<Options>) -> Re
     drop(moltext);
     drop(opts);
     build_output(rc, &out)
+}
+
+/// Generates an InChI for each record in a multi-record SDF string.
+///
+/// An SDF (Structure-Data File) is a sequence of Molfile records separated by
+/// `$$$$` lines, with optional data fields between `M  END` and `$$$$`. This
+/// function splits the input on `$$$$`, discards empty segments, and calls
+/// [`from_molfile`] on each record. Records are processed lazily — the iterator
+/// does not parse ahead.
+///
+/// For a single `.mol` file use [`from_molfile`] directly; `from_sdf` also
+/// accepts it (a Molfile with no `$$$$` delimiter is treated as a one-record
+/// SDF), but [`from_molfile`] is the clearer choice.
+///
+/// # Errors
+///
+/// Each iterator item is a `Result`. A record that cannot be parsed yields
+/// [`InchiError::Failed`]; errors do not abort the remaining records.
+///
+/// ```
+/// use inchi::from_sdf;
+///
+/// // In a real application: let sdf = std::fs::read_to_string("molecules.sdf")?;
+/// let sdf = include_str!("../tests/fixtures/methane_water.sdf");
+///
+/// let results: Vec<_> = from_sdf(sdf, ()).collect();
+/// assert_eq!(results.len(), 2);
+/// assert_eq!(results[0].as_ref().unwrap().inchi(), "InChI=1S/CH4/h1H4");
+/// assert_eq!(results[1].as_ref().unwrap().inchi(), "InChI=1S/H2O/h1H2");
+/// # Ok::<(), inchi::InchiError>(())
+/// ```
+pub fn from_sdf(
+    sdf: &str,
+    options: impl Into<Options>,
+) -> impl Iterator<Item = Result<InchiOutput>> + '_ {
+    let options = options.into();
+    sdf.split("$$$$")
+        .filter(|record| !record.trim().is_empty())
+        // Each segment after a `$$$$` separator starts with the newline that
+        // terminated the `$$$$` line itself. Strip it so that the mol-name
+        // line lands on line 1 as the Molfile format requires.
+        .map(move |record| from_molfile(record.trim_start_matches('\n'), options.clone()))
 }
 
 /// Computes the 27-character InChIKey for an InChI string.

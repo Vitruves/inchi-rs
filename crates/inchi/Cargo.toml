@@ -11,6 +11,7 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 readme = "README.md"
+documentation = "https://docs.rs/inchi"
 
 [dependencies]
 inchi-sys.workspace = true

@@ -63,11 +63,6 @@ typedef struct tagLine
 #define COMP_PREP_0_RECN  0x0008
 #define COMP_ORIG_1_MAIN  0x0010
 #define COMP_ORIG_1_RECN  0x0020
-/* Renumbering atoms stuff */
-#define PERMAXATOMS 32767
-#define BYTE(X) ((unsigned char *)(X))
-int rrand( int m );
-void shuffle( void *obj, size_t nmemb, size_t size );
 
 
 /* STRUCT_DATA */
@@ -505,7 +500,6 @@ int bIsStructChiral( PINChI2 *pINChI2[INCHI_NUM], int num_components[] );
 /* ORIG_ATOM_DATA  */
 
 int  OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom, ORIG_ATOM_DATA *orig_atom );
-void OrigAtData_Permute( ORIG_ATOM_DATA *permuted, ORIG_ATOM_DATA *saved, int *numbers );
 
 int  OrigAtData_RemoveAtom(ORIG_ATOM_DATA *orig_at_data, int iatom);
 int  OrigAtData_AddSingleStereolessBond( int this_atom, int other_atom,

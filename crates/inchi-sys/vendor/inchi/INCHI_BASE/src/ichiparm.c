@@ -1344,7 +1344,7 @@ int ReadCommandLineParms(int argc,
                     timeout_value = strtol(pArg + 2, (char**)&q, 10);
                     if (timeout_value && q > pArg + 2 && *q == '\0')
                     {
-                        if (errno == ERANGE || timeout_value < 0.0 || timeout_value>LONG_MAX)
+                        if (errno == ERANGE || timeout_value < 0.0 || timeout_value>LONG_MAX) /* djb-rwth: addressing coverity ID #499550 -- the condition takes into account all possible overflows/errors */
                         {
                             timeout_value = 0;
                             timeout_set_warning = 1;
@@ -1784,9 +1784,9 @@ int ReadCommandLineParms(int argc,
                 char* pLastExt = NULL;
 #endif
                 len = (int)strlen(p_prev) + strlen(szNameSuffix) + strlen(ext[i]);
-                if ((sz = (char*)inchi_malloc(((long long)len + 1) * sizeof(sz[0])))) /* djb-rwth: cast operator added; addressing LLVM warning; cast operator added */
+                if ((sz = (char*)inchi_malloc(((long long)len + 1) * sizeof(sz[0])))) /* djb-rwth: cast operators added; addressing and ignoring LLVM warnings */
                 {
-                    strcpy(sz, p);
+                    strcpy(sz, p_prev); /* djb-rwth: fix for use of memory after being freed */
 #if ( BUILD_WITH_AMI == 1 ) && ( OUTPUT_FILE_EXT == 1 )
                     if (pLastExt)
                     {

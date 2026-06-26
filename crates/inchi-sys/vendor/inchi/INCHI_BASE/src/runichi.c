@@ -51,6 +51,7 @@
 #include <limits.h>
 #include <math.h>
 #include <ctype.h>
+#include <locale.h>
 
 #include "mode.h"
 #include "ichitime.h"
@@ -246,11 +247,21 @@ int ProcessOneStructure( INCHI_CLOCK            *ic,
     int err, ret1 = 0;
 
     /* djb-rwth: removing redundant code */
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
+#endif
 
     /*    1. Preliminary work */
 
-    int is_polymer = orig_inp_data
-                     && orig_inp_data->valid_polymer
+    /* djb-rwth: fixing coverity ID #499508 */
+    if (!orig_inp_data)
+    {
+        goto exit_function;
+    }
+
+    int is_polymer = orig_inp_data->valid_polymer
                      && orig_inp_data->polymer
                      && orig_inp_data->polymer->n ;
 
@@ -638,6 +649,7 @@ void PrepareSaveOptBits( unsigned char *save_opt_bits, INPUT_PARMS *ip )
             {
                 ( *save_opt_bits ) |= SAVE_OPT_15T;
             }
+            /* djb-rwth: addressing coverity ID #499536 -- despite different bit-sizes, works properly */
             if (0 != (ip->bTautFlags & TG_FLAG_PT_22_00))
                 (*save_opt_bits) |= SAVE_OPT_PT_22_00;
             if (0 != (ip->bTautFlags & TG_FLAG_PT_16_00))
@@ -784,7 +796,7 @@ void SaveOkProcessedMolfile( int            nRet,
          0L <= sd->fPtrStart              &&
          sd->fPtrStart < sd->fPtrEnd)
     {
-        MolfileSaveCopy( inp_file, sd->fPtrStart, sd->fPtrEnd, prb_file->f, 0 );
+        MolfileSaveCopy( inp_file, sd->fPtrStart, sd->fPtrEnd, prb_file->f, 0 ); /* djb-rwth: addressing coverity ID #499510 -- return values handled properly */
     }
 
     return;
@@ -816,6 +828,12 @@ int CreateOneStructureINChI( CANON_GLOBALS          *pCG,
     int i, j, k, nRet = 0, n = 0l;
 #if defined (TARGET_EXE_STANDALONE) && defined(_WIN32)
     int err_display;
+#endif
+
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
 #endif
 
     PINChI2     *pINChI = NULL;
@@ -1751,6 +1769,12 @@ int CreateOneComponentINChI( CANON_GLOBALS      *pCG,
     long          lElapsedTime;
 
     int nAllocMode = 0;  /* moved from below 2024-09-01 DT */
+
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
+#endif
 
     InchiTimeGet( &ulTStart );
     bOrigCoord =
@@ -2874,7 +2898,13 @@ int ValidateAndPreparePolymerAndPseudoatoms( struct tagINCHI_CLOCK *ic,
 
     int mind_pseudoelements = 0;
     
-    *mind_polymers = orig_inp_data && orig_inp_data->polymer && orig_inp_data->polymer->n > 0;
+    /* djb-rwth: fixing coverity ID #499512 */
+    if (!orig_inp_data)
+    {
+        goto exit_function;
+    }
+
+    *mind_polymers = orig_inp_data->polymer && orig_inp_data->polymer->n > 0;
     *mind_polymers = *mind_polymers && orig_inp_data->valid_polymer &&
         (ip->nInputType == INPUT_MOLFILE || ip->nInputType == INPUT_SDFILE);
     mind_pseudoelements = (ip->bNPZz == 1) || (ip->bPolymers != POLYMERS_NO);
@@ -2893,8 +2923,7 @@ int ValidateAndPreparePolymerAndPseudoatoms( struct tagINCHI_CLOCK *ic,
                           sd->nErrorCode, sd->pStrErrStruct, num_inp,
                           SDF_LBL_VAL( ip->pSdfLabel, ip->pSdfValue ) );
         res = _IS_ERROR;
-        if (orig_inp_data) /* djb-rwth: fixing a NULL pointer dereference */
-            orig_inp_data->num_inp_atoms = -1;
+        orig_inp_data->num_inp_atoms = -1; /* djb-rwth: fixing coverity ID #499522 */
         goto exit_function;
     }
 
@@ -3182,9 +3211,9 @@ int mark_atoms_to_delete_or_renumber( ORIG_ATOM_DATA *orig_at_data,
             natnums = subgraf_pathfinder_collect_all(spf, 0, NULL, (int*)atnums);
             if (natnums)
             {
-                for (j = 0; j < natnums; j++)
+                for (j = 0; j < natnums && j < max_atoms; j++) /* djb-rwth: fixing buffer overruns */
                 {
-                    fail = IntArray_AppendIfAbsent(ed->del_atom, atnums[j]); /* djb-rwth: ui_rr? */
+                    fail = IntArray_AppendIfAbsent(ed->del_atom, atnums[j]);
                     if (fail)
                     {
                         ret = _IS_ERROR;

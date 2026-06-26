@@ -4095,7 +4095,7 @@ int bin_AuxTautTrans( INCHI_SORT *pINChISort,
     int        bOutType,
     int        num_components )
 {
-    int          i, ii, ii2, ret;
+    int          i, ii, ii2, ret = 0;
     INCHI_SORT   *is, *is2, *is0, *is20;
     INChI        *pINChI, *pINChI_Taut;
     AT_NUMB     *nTrans_n = NULL;
@@ -4105,7 +4105,7 @@ int bin_AuxTautTrans( INCHI_SORT *pINChISort,
     is0 = pINChISort;
     is20 = pINChISort2;
 
-    /* djb-rwth: rewritten to avoid memory leaks */
+    /* djb-rwth: rewritten to avoid memory leaks -- updated 25/09/2025 */
 
     /* Pass 1: save new non-taut numbering */
     /* For each connected component...    */
@@ -4120,10 +4120,13 @@ int bin_AuxTautTrans( INCHI_SORT *pINChISort,
             /* different components save equal new ord. numbers: */
             is->ord_number != is2->ord_number)
         {
-            if (!nTrans_n || !nTrans_s)
+            if (!nTrans_n)
             {
-                nTrans_n = (AT_NUMB*)inchi_calloc(num_components + 1, sizeof(nTrans_n[0]));
-                nTrans_s = (AT_NUMB*)inchi_calloc(num_components + 1, sizeof(nTrans_s[0]));
+                nTrans_n = (AT_NUMB*)inchi_calloc((long long)num_components + 1, sizeof(nTrans_n[0]));
+            }
+            if (!nTrans_s)
+            {
+                nTrans_s = (AT_NUMB*)inchi_calloc((long long)num_components + 1, sizeof(nTrans_s[0]));
             }
             if (nTrans_n && nTrans_s)
             {

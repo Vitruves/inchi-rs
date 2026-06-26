@@ -292,6 +292,7 @@ int OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom,
                 newp->pzz = (int *) inchi_calloc( newp->n_pzz, sizeof( int ) );
                 if (!newp->pzz)
                 {
+                    inchi_free(newp->units); /* djb-rwth: fixing coverity ID #499546 */
                     inchi_free(newp); /* djb-rwth: avoiding memory leak */
                     goto exit_function;
                 }
@@ -346,6 +347,9 @@ int OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom,
                     lst = new_v3000->lists_haptic_bonds[m] = (int *) inchi_calloc( nn, sizeof( int ) );
                     if (!lst)
                     {
+                        inchi_free(new_v3000->lists_haptic_bonds); /* djb-rwth: fixing coverity ID #499504 */
+                        inchi_free(new_v3000->atom_index_orig); /* djb-rwth: fixing coverity ID #499540 */
+                        inchi_free(new_v3000->atom_index_fin); /* djb-rwth: fixing coverity ID #499613 */
                         inchi_free(new_v3000); /* djb-rwth: avoiding memory leak */
                         goto exit_function;
                     }
@@ -364,6 +368,10 @@ int OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom,
                     lst = new_v3000->lists_steabs[m] = (int *) inchi_calloc( nn, sizeof( int ) );
                     if (!lst)
                     {
+                        inchi_free(new_v3000->lists_haptic_bonds); /* djb-rwth: fixing coverity ID #499504 */
+                        inchi_free(new_v3000->lists_steabs); /* djb-rwth: fixing coverity ID #499543 */
+                        inchi_free(new_v3000->atom_index_orig); /* djb-rwth: fixing coverity ID #499540 */
+                        inchi_free(new_v3000->atom_index_fin); /* djb-rwth: fixing coverity ID #499613 */
                         inchi_free(new_v3000); /* djb-rwth: avoiding memory leak */
                         goto exit_function;
                     }
@@ -388,6 +396,11 @@ int OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom,
                         lst = new_v3000->lists_sterel[m] = (int *) inchi_calloc( nn, sizeof( int ) );
                     if (!lst)
                     {
+                        inchi_free(new_v3000->lists_haptic_bonds); /* djb-rwth: fixing coverity ID #499504 */
+                        inchi_free(new_v3000->lists_steabs); /* djb-rwth: fixing coverity ID #499543 */
+                        inchi_free(new_v3000->lists_sterel); /* djb-rwth: fixing coverity ID #499504 */
+                        inchi_free(new_v3000->atom_index_orig); /* djb-rwth: fixing coverity ID #499540 */
+                        inchi_free(new_v3000->atom_index_fin); /* djb-rwth: fixing coverity ID #499613 */
                         inchi_free(new_v3000); /* djb-rwth: avoiding memory leak */
                         goto exit_function;
                     }
@@ -408,6 +421,12 @@ int OrigAtData_Duplicate( ORIG_ATOM_DATA *new_orig_atom,
                         lst = new_v3000->lists_sterac[m] = (int*)inchi_calloc(nn, sizeof(int));
                         if (!lst)
                         {
+                            inchi_free(new_v3000->lists_haptic_bonds); /* djb-rwth: fixing coverity ID #499504 */
+                            inchi_free(new_v3000->lists_steabs); /* djb-rwth: fixing coverity ID #499543 */
+                            inchi_free(new_v3000->lists_sterel); /* djb-rwth: fixing coverity ID #499504 */
+                            inchi_free(new_v3000->lists_sterac); /* djb-rwth: fixing coverity ID #499575 */
+                            inchi_free(new_v3000->atom_index_orig); /* djb-rwth: fixing coverity ID #499540 */
+                            inchi_free(new_v3000->atom_index_fin); /* djb-rwth: fixing coverity ID #499613 */
                             inchi_free(new_v3000); /* djb-rwth: avoiding memory leak */
                             goto exit_function;
                         }
@@ -1508,6 +1527,7 @@ int OAD_ValidatePolymerAndPseudoElementData( ORIG_ATOM_DATA *orig_at_data,
 
 
     /* Assign polymer type and subunits type and check polymer data for consistency */
+    /* djb-rwth: addressing coverity ID #499497 -- TREAT_ERR properly used in all cases */
     
     orig_at_data->valid_polymer = 0;
     if (treat_polymers && pd)
@@ -2943,6 +2963,7 @@ void OAD_CollectBackboneAtoms(ORIG_ATOM_DATA  *at_data,
     *nbkatoms = 0;
     maxbkbonds = at_data->num_inp_bonds + 2;
     *err = imat_new(maxbkbonds, 2, &(bkbonds));
+    /* djb-rwth: addressing coverity ID #499570 -- TREAT_ERR properly used in all cases */
     if (*err)
     {
         TREAT_ERR(*err, 9034, "Not enough memory (polymers)");
@@ -3063,9 +3084,9 @@ int OAD_CollectReachableAtoms( ORIG_ATOM_DATA  *orig_at_data,
             goto exit_function;
         }
 
-        for (j = 0; j < natnums; j++)
+        for (j = 0; j < natnums && j < max_atoms; j++) /* djb-rwth: fixing buffer overruns */
         {
-            reachable[(*n_reachable)++ ] = atnums[j]; /* djb-rwth: ui_rr */
+            reachable[(*n_reachable)++ ] = atnums[j];
         }
     }
 
@@ -3120,7 +3141,7 @@ void OAD_CollectBackboneBonds(ORIG_ATOM_DATA  *at_data,
     spf = subgraf_pathfinder_new( sg, at_data, start, end );
     if (!spf)
     {
-        TREAT_ERR( *err, 9039, "Not enough memory (polymers)" );
+        TREAT_ERR( *err, 9039, "Not enough memory (polymers)" ); /* djb-rwth: addressing coverity ID #499539 -- TREAT_ERR properly used */
         /*unit->cyclizable = CLOSING_SRU_NOT_APPLICABLE;*/
         return;
     }
@@ -3866,19 +3887,23 @@ void OAD_Polymer_SmartReopenCyclizedUnits( OAD_Polymer *p,
 
     if (!p)
     {
+        inchi_free(aprops); /* djb-rwth: avoiding memory leak */
         return;
     }
     if (p->n < 1)
     {
+        inchi_free(aprops); /* djb-rwth: avoiding memory leak */
         return;
     }
     if (!p->really_do_frame_shift)
     {
+        inchi_free(aprops); /* djb-rwth: avoiding memory leak */
         return;
     }
     /* djb-rwth: fixing oss-fuzz issue #68329 */
     if (nat <= 0)
     {
+        inchi_free(aprops); /* djb-rwth: avoiding memory leak */
         return;
     }
 
@@ -3888,6 +3913,7 @@ void OAD_Polymer_SmartReopenCyclizedUnits( OAD_Polymer *p,
     /* Set atom properties for sorting */
     if (!aprops || !at) /* djb-rwth: fixing oss-fuzz issue #68329, #68286 */
     {
+        inchi_free(aprops); /* djb-rwth: avoiding memory leak */
         return;
     }
     OAD_Polymer_SetAtProps( p, at, nat, num_inp_bonds, aprops, NULL ); /* NULL as we alredy are in 1-based cano_nums while at i2s/i2i*/

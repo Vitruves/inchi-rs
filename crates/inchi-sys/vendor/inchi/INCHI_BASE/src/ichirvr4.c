@@ -2304,7 +2304,7 @@ int MakeSingleBondsMetal2ChargedHeteroat(BN_STRUCT* pBNS,
         if (nNumEdgesToFix != cur_num_edges)
         {
             ret = RI_ERR_PROGR;
-            goto exit_function;
+            goto pre_exit_function; /* djb-rwth: fixing coverity ID #499637 */
         }
         /* change edge flow, fix the edges, and run BNS */
         for (i = 0; i < nNumEdgesToFix; i++)
@@ -2324,7 +2324,7 @@ int MakeSingleBondsMetal2ChargedHeteroat(BN_STRUCT* pBNS,
         (*pnNumRunBNS)++;
         if (ret < 0)
         {
-            goto exit_function;
+            goto pre_exit_function; /* djb-rwth: fixing coverity ID #499637 */
         }
         else
         {
@@ -2343,7 +2343,7 @@ int MakeSingleBondsMetal2ChargedHeteroat(BN_STRUCT* pBNS,
             (*pnNumRunBNS)++;
             if (ret < 0)
             {
-                goto exit_function;
+                goto pre_exit_function; /* djb-rwth: fixing coverity ID #499637 */
             }
             else
             {
@@ -2351,6 +2351,8 @@ int MakeSingleBondsMetal2ChargedHeteroat(BN_STRUCT* pBNS,
             }
         }
     }
+
+pre_exit_function:
     if (pFixedEdges)
     {
         inchi_free(pFixedEdges);
@@ -2358,7 +2360,6 @@ int MakeSingleBondsMetal2ChargedHeteroat(BN_STRUCT* pBNS,
     }
 
 exit_function:
-
     return ret;
 }
 

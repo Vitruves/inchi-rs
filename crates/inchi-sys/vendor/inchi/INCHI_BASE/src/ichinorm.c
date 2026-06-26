@@ -1817,10 +1817,10 @@ int is_DERIV_RING_DMOX_DEOX_O( inp_ATOM *at,
     ->
     --------------------------*/
     /*            #0           #1           #2           #3           #4 */
-    const static U_CHAR bond_type[OX_RING_SIZE] = { BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_DOUBLE, BOND_SINGLE };
-    const static S_CHAR valence[OX_RING_SIZE] = { 2,           2,           4,           2,           3 };
-    const static S_CHAR bonds_valence[OX_RING_SIZE] = { 2,           2,           4,           3,           4 };
-    const static S_CHAR num_H[OX_RING_SIZE] = { 0,           2,           0,           0,           0 };
+    static const U_CHAR bond_type[OX_RING_SIZE] = { BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_DOUBLE, BOND_SINGLE };
+    static const S_CHAR valence[OX_RING_SIZE] = { 2,           2,           4,           2,           3 };
+    static const S_CHAR bonds_valence[OX_RING_SIZE] = { 2,           2,           4,           3,           4 };
+    static const S_CHAR num_H[OX_RING_SIZE] = { 0,           2,           0,           0,           0 };
 
     AT_NUMB from, curr, next, nRingSystem, at_no[OX_RING_SIZE];
     S_CHAR  bond_no[OX_RING_SIZE];
@@ -1977,10 +1977,10 @@ int is_DERIV_RING_DMOX_DEOX_N( inp_ATOM *at,
     <-
     --------------------------*/
     /*            #0           #1           #2           #3           #4 */
-    const static U_CHAR bond_type[OX_RING_SIZE] = { BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_DOUBLE };
-    const static S_CHAR valence[OX_RING_SIZE] = { 2,           4,           2,           2,           3 };
-    const static S_CHAR bonds_valence[OX_RING_SIZE] = { 3,           4,           2,           2,           4 };
-    const static S_CHAR num_H[OX_RING_SIZE] = { 0,           0,           2,           0,           0 };
+    static const U_CHAR bond_type[OX_RING_SIZE] = { BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_SINGLE, BOND_DOUBLE };
+    static const S_CHAR valence[OX_RING_SIZE] = { 2,           4,           2,           2,           3 };
+    static const S_CHAR bonds_valence[OX_RING_SIZE] = { 3,           4,           2,           2,           4 };
+    static const S_CHAR num_H[OX_RING_SIZE] = { 0,           0,           2,           0,           0 };
 
     AT_NUMB from, curr, next, nRingSystem, at_no[OX_RING_SIZE];
     S_CHAR  bond_no[OX_RING_SIZE];
@@ -2261,7 +2261,7 @@ int is_DERIV_RING2_PRRLDD_PPRDN( inp_ATOM *at,
                 k = ( ord[1] < ord[0] );
                 da1->ord[0] = ord[k];  /* smaller */
                 da1->ord[1] = ord[!k]; /* greater */
-                da1->num[0] = da1->num[0] = i - 1;
+                /*da1->num[0] = */da1->num[0] = i - 1; /* djb-rwth: unresolved issue -- revision required? / da1->num[1] = i-1? */
             }
             return i;
         }
@@ -3251,7 +3251,7 @@ int add_to_da( DERIV_AT *da, DERIV_AT *add )
     {
         numDaHiPri += ( 0 != ( da->typ[len_da] & DERIV_UNEXPADABLE ) );
     }
-    for (len_add = 0, numAddHiPri = 0; len_add < DERIV_AT_LEN && da->typ[len_add]; len_add++)
+    for (len_add = 0, numAddHiPri = 0; len_add < DERIV_AT_LEN && da->typ[len_add]; len_add++) /* djb-rwth: addressing coverity ID #499516 -- definitely not a copy-paste error */
     {
         numAddHiPri += ( 0 != ( add->typ[len_add] & DERIV_UNEXPADABLE ) );
     }
@@ -3336,19 +3336,16 @@ int mark_atoms_deriv( inp_ATOM *at,
                       char cFlags,
                       int *pbFound )
 {
-    int i, nFound = 0, ret, j;
+    int i, nFound = 0, ret; /* djb-rwth: removing redundant variables */
     DERIV_AT da1;
     int      ret2;   /* moved from below 2024-09-01 DT */
     DERIV_AT da2;    /* moved from below 2024-09-01 DT */
     da1.other_atom = 0; /* djb-rwth: initialisation needed for if conditons */
 #if( defined(DERIV_RING_DMOX_DEOX_N) && defined(DERIV_RING_DMOX_DEOX_O) )
-    /* djb-rwth: initialisation needed to avoid garbage values in add_to_da function call */
-    for (j = 0; j < DERIV_AT_LEN; j++)
-    {
-        da->typ[j] = 0;
-        da->ord[j] = '\0';
-        da->num[j] = '\0';
-    }
+    /* djb-rwth: initialisation needed to avoid garbage values in add_to_da function call; fixing coverity ID #499492 */
+    memset(da2.typ, 0, DERIV_AT_LEN * sizeof(da2.typ[0]));
+    memset(da2.ord, '\0', DERIV_AT_LEN * sizeof(da2.ord[0]));
+    memset(da2.num, '\0', DERIV_AT_LEN * sizeof(da2.num[0]));
     da2.other_atom = 0; /* djb-rwth: initialisation needed for if conditons */
 #endif
     if (!( at[start].cFlags & cFlags ))
@@ -4776,6 +4773,7 @@ int is_deriv_chain2( inp_ATOM *at,
                                   n2 == 2 ? "C2F5" :
                                   n2 == 3 ? "C3F7" :
                                   "C?F?", 0 );
+                /* djb-rwth: addressing coverity ID #499506 -- condition is correct for n1 != 1 */
                 underiv_list_add( szUnderiv2, lenUnderiv2, pszDerivName[
 #if defined(UNDERIV_RN_AcMe) || defined(UNDERIV_RNH_AcMe)
                     n1 == 1 ? DERIV_ID_Acetate :
@@ -4937,7 +4935,7 @@ int is_deriv_chain2( inp_ATOM *at,
             if (num == 4 || num == 5)
             {
                 underiv_list_add( szUnderiv, lenUnderiv, num == 4 ? "Pyrrolidide" : num == 5 ? "Piperidine" : "???", ' ' );
-                underiv_list_add( szUnderiv2, lenUnderiv2, pszDerivName[num == 4 ? DERIV_ID_Pyrrolidide : num == 5 ? DERIV_ID_Piperidine : DERIV_ID_Unknown], ' ' );
+                underiv_list_add( szUnderiv2, lenUnderiv2, pszDerivName[num == 4 ? DERIV_ID_Pyrrolidide : num == 5 ? DERIV_ID_Piperidine : DERIV_ID_Unknown], ' ' ); /* djb-rwth: addressing coverity ID #499491 -- working correctly for num == 5 */
                 *bitUnderiv |= num == 4 ? DERIV_BIT_Pyrrolidide : num == 5 ? DERIV_BIT_Piperidine : DERIV_BIT_Unknown;
             }
             else
@@ -6493,7 +6491,7 @@ int OAD_Edit_Underivatize( struct tagINCHI_CLOCK *ic,
                         continue;
                     }
                     /*for ( k = 0; k < MAX_AT_DERIV && da[n].typ[k]; k ++ ) -- bug fixed 2013-11-07 DCh */
-                    for (k = 0; k < DERIV_AT_LEN && da[n].typ[k]; k++) /* djb-rwth: ui_rr */
+                    for (k = 0; k < DERIV_AT_LEN && n< num_atoms && da[n].typ[k]; k++)
                     {
                         if (da[n].typ[k] & DERIV_DUPLIC)
                         {
@@ -6877,7 +6875,7 @@ int OAD_Edit_Underivatize( struct tagINCHI_CLOCK *ic,
                 for (j = n = 0; j < 2; j++)
                 {
                     int atj = (int) ap[i].at[j];
-                    if (da[atj].typ[0] && at[atj].neighbor[(int) da[atj].ord[0]] == ap[i].at[1 - j])
+                    if (atj < num_atoms && da[atj].typ[0] && at[atj].neighbor[(int) da[atj].ord[0]] == ap[i].at[1 - j])
                     {
                         k = j;      /* ap[i].at[k] is precursor atom */
                         n++;
@@ -6886,7 +6884,7 @@ int OAD_Edit_Underivatize( struct tagINCHI_CLOCK *ic,
                     }
                     else
                     {
-                        if (da[atj].typ[1] && at[atj].neighbor[(int) da[atj].ord[1]] == ap[i].at[1 - j])
+                        if (atj < num_atoms && da[atj].typ[1] && at[atj].neighbor[(int) da[atj].ord[1]] == ap[i].at[1 - j])
                         {
                             k = j;
                             n++;
@@ -7570,13 +7568,19 @@ void OAD_Edit_MergeComponentsAndRecreateOAD( ORIG_ATOM_DATA *orig_OrigAtomData,
     int i, num_atoms = 0, cur_num_at = 0;
     inp_ATOM *at;
 
+    if (num_components <= 0)
+    {
+        *errcode = -999; /* num atoms mismatch */
+        return;
+    }
+
     /* Merge kept components into 'at' */
     for (i = 0; i < num_components; i++)
     {
         num_atoms += curr_InpAtomData[i].num_at;
     }
 
-    at = (inp_ATOM *) inchi_calloc( num_atoms, sizeof( at[0] ) ); /* djb-rwth: ignoring LLVM warning: possible presence of global variables -- senseless statement */
+    at = (inp_ATOM *) inchi_calloc( num_atoms, sizeof( at[0] ) );
     cur_num_at = 0;
 
     for (i = 0; i < num_components; i++)
@@ -7690,7 +7694,7 @@ void remove_cut_derivs( int num_atoms,
 
     inp_cur_data1 = (INP_ATOM_DATA *) inchi_calloc( num_components1, sizeof( inp_cur_data1[0] ) );
 
-    if (inp_cur_data1) /* djb-rwth: fixing a NULL pointer dereference */
+    if (inp_cur_data1 && (num_components1 > 0)) /* djb-rwth: fixing a NULL pointer dereference */
     {
     /* Extract components and discard disconnected derivatizing agents */
     for (i_component1 = 0; i_component1 < num_components1; i_component1++)
@@ -7725,7 +7729,7 @@ void remove_cut_derivs( int num_atoms,
     {
         num_atoms += inp_cur_data1[i_component1].num_at;
     }
-    at = (inp_ATOM *) inchi_calloc( num_atoms, sizeof( at[0] ) ); /* djb-rwth: ignoring LLVM warning: possible presence of global variables -- senseless statement */
+    at = (inp_ATOM *) inchi_calloc( num_atoms, sizeof( at[0] ) );
     cur_num_at = 0;
     for (i_component1 = 0; i_component1 < num_components1; i_component1++)
     {

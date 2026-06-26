@@ -244,7 +244,7 @@ extern "C" {
 /****************************************************************************/
 /*              Functions handling IXA Status Objects                      */
 
-    EXPIMP_TEMPLATE INCHI_API IXA_STATUS_HANDLE INCHI_DECL IXA_STATUS_Create( );
+    EXPIMP_TEMPLATE INCHI_API IXA_STATUS_HANDLE INCHI_DECL IXA_STATUS_Create( void );
 
     EXPIMP_TEMPLATE INCHI_API void INCHI_DECL IXA_STATUS_Clear( IXA_STATUS_HANDLE hStatus );
 
@@ -261,6 +261,8 @@ extern "C" {
 
     EXPIMP_TEMPLATE INCHI_API const char* INCHI_DECL IXA_STATUS_GetMessage( IXA_STATUS_HANDLE hStatus,
                                                                            int               vIndex );
+
+
 
 
     /****************************************************************************/
@@ -287,13 +289,18 @@ extern "C" {
                                                                  IXA_MOL_HANDLE    hMolecule,
                                                                  const char*       pInChI );
 
+    EXPIMP_TEMPLATE INCHI_API void INCHI_DECL IXA_MOL_ReadAuxInfo(IXA_STATUS_HANDLE hStatus,
+                                                                    IXA_MOL_HANDLE    hMolecule,
+                                                                    char* pAuxInfo,
+                                                                    int               bDoNotAddH,
+                                                                    int               bDiffUnkUndfStereo);
+
     EXPIMP_TEMPLATE INCHI_API void INCHI_DECL IXA_MOL_SetChiral( IXA_STATUS_HANDLE hStatus,
                                                                  IXA_MOL_HANDLE    hMolecule,
                                                                  IXA_BOOL          vChiral );
 
     EXPIMP_TEMPLATE INCHI_API IXA_BOOL INCHI_DECL IXA_MOL_GetChiral( IXA_STATUS_HANDLE hStatus,
                                                                      IXA_MOL_HANDLE    hMolecule );
-
 
 
     /****************************************************************************/
@@ -604,6 +611,8 @@ extern "C" {
                                                                            IXA_INCHIBUILDER_HANDLE hInChIBuilder,
                                                                            IXA_MOL_HANDLE          hMolecule );
 
+    EXPIMP_TEMPLATE INCHI_API const char* INCHI_DECL IXA_INCHIBUILDER_GetInChIVersion(IXA_BOOL vFullDescription);
+
     EXPIMP_TEMPLATE INCHI_API const char* INCHI_DECL IXA_INCHIBUILDER_GetInChI( IXA_STATUS_HANDLE       hStatus,
                                                                                IXA_INCHIBUILDER_HANDLE hInChIBuilder );
 
@@ -618,7 +627,6 @@ extern "C" {
 
     EXPIMP_TEMPLATE INCHI_API void INCHI_DECL IXA_INCHIBUILDER_Destroy( IXA_STATUS_HANDLE       hStatus,
                                                                        IXA_INCHIBUILDER_HANDLE hInChIBuilder );
-
 
 
     /****************************************************************************/

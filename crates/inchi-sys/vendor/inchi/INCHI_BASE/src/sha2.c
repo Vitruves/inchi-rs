@@ -230,9 +230,9 @@ void sha2_update(sha2_context *ctx, unsigned char *input, int ilen)
         left = 0;
     }
 
-    while (ilen >= 64)
+    while (ilen >= 64) 
     {
-        sha2_process(ctx, input);
+        sha2_process(ctx, input); /* djb-rwth: ignoring LLVM warning as ilen >= 64 just in test case */
         input += 64;
         ilen -= 64;
     }
@@ -297,7 +297,7 @@ int sha2_file(char *path, unsigned char output[32])
 
     sha2_starts(&ctx);
 
-    while ((n = fread(buf, 1, sizeof(buf), f)) > 0)
+    while (!feof(f) && (n = fread(buf, 1, sizeof(buf), f)) > 0) /* djb-rwth: addressing LLVM warning */
         sha2_update(&ctx, buf, (int)n);
 
     sha2_finish(&ctx, output);

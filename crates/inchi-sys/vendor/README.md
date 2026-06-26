@@ -6,9 +6,9 @@ This directory contains a verbatim subset of the official IUPAC International Ch
 | -------- | ------------------------------------------ |
 | Project  | InChI                                      |
 | Upstream | <https://github.com/IUPAC-InChI/InChI>     |
-| Version  | 1.07.3                                     |
-| Git tag  | `v1.07.3`                                  |
-| Commit   | `0b3e941d29289f3e5024c9ecfd45186285319420` |
+| Version  | 1.07.5                                     |
+| Git tag  | `v1.07.5`                                  |
+| Commit   | `11a87982bb518f57ac013f0b258c283655e1ea1d` |
 | License  | MIT (see [`inchi/LICENSE`](inchi/LICENSE)) |
 
 ## What is included
@@ -38,6 +38,6 @@ The vendored C sources are otherwise verbatim, with a single memory-safety fix. 
 
 | File | Function | Fix |
 | ---- | -------- | --- |
-| `inchi/INCHI_API/libinchi/src/inchi_dll.c` | `SetInChIExtInputByExtOrigAtData` | Removes a use-after-free: the upstream oss-fuzz hardening (issues #67695, #66748) freed the polymer data it had just assigned to the caller-owned `*iip`, so `GetStructFromINCHIEx` returned a dangling `polymer` pointer. The data is owned by the caller and released later by `FreeStructFromINCHIEx`/`FreeInChIExtInput`. The fix does **not** change any computed InChI string. |
+| `inchi/INCHI_API/libinchi/src/inchi_dll.c` | `SetInChIExtInputByExtOrigAtData` | Fixes a use-after-free: 1.07.5 frees the polymer unit allocations that the caller still holds via `*iip`, replacing them with a `memcpy` approach that silently no-ops when `*iip` is NULL (the normal case at the call site). The patch restores direct pointer ownership and removes the premature frees. Does **not** change any computed InChI string. |
 
 This patch was reported upstream; remove it once a fixed release is vendored.

@@ -881,8 +881,8 @@ int FillTautLinearCT2( CANON_GLOBALS *pCG,
     T_GROUP *t_group;
 
     int      i, j, len = 0, g, offset, max_len = 0, len_iso = 0; /* djb-rwth: removing redundant variable */
-    const static int max_num_num = sizeof( t_group->num ) / sizeof( t_group->num[0] );
-    const static int max_num_iso = sizeof( LinearCTIsotopicTautomer->num ) / sizeof( LinearCTIsotopicTautomer->num[0] ) + T_NUM_NO_ISOTOPIC;
+    static const int max_num_num = sizeof( t_group->num ) / sizeof( t_group->num[0] );
+    static const int max_num_iso = sizeof( LinearCTIsotopicTautomer->num ) / sizeof( LinearCTIsotopicTautomer->num[0] ) + T_NUM_NO_ISOTOPIC;
 
     /****************************************************************************
 
@@ -1205,14 +1205,14 @@ int UpdateFullLinearCT( int num_atoms,
         if (t_group_info) 
             nEndpointAtomNumber = t_group_info->nEndpointAtomNumber + (int) t_group[i].nFirstEndpointAtNoPos; /* djb-rwth: fixing a NULL pointer dereference */
         pCG->m_pn_RankForSort = nRank;
-        if (t_group + i)
+        if (t_group + i) /* djb-rwth: ignoring GCC warning */
             num_neigh = (int)t_group[i].nNumEndpoints;
         insertions_sort( pCG, nEndpointAtomNumber, (size_t) num_neigh, sizeof( nEndpointAtomNumber[0] ), CompRank );
 
         for (k = 0; k < num_neigh; k++)
         {
             /* rank = (new current atom Rank) */
-            if (nEndpointAtomNumber + k) /* djb-rwth: fixing a NULL pointer dereference */
+            if (nEndpointAtomNumber + k) /* djb-rwth: fixing a NULL pointer dereference; ignoring GCC warning */
             {
                 if ((int)(r_neigh = (AT_NUMB)nRank[(int)nEndpointAtomNumber[k]]) CT_NEIGH_SMALLER_THAN rank) 
                 {
@@ -2691,8 +2691,9 @@ exit_function:
                 inchi_free( pRankStack2[n] );
             }
         }
-        inchi_free( pRankStack2 );
     }
+
+    inchi_free(pRankStack2); /* djb-rwth: fixing coverity ID #499631 */
 
     pCS->NeighList = NULL; /* keep the pointer in pBCN->ftcn[bTaut].NeighList for further deallocation */
     qfree( nAtomNumber );

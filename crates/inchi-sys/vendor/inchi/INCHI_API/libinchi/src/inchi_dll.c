@@ -48,6 +48,7 @@
 #include <limits.h>
 #include <float.h>
 #include <math.h>
+#include <locale.h>
 
 #include "../../../INCHI_BASE/src/mode.h"
 
@@ -388,6 +389,12 @@ static int GetINCHI1( inchi_InputEx *extended_input,
 
     inchi_Input prev_versions_input;
     inchi_Input *pvinp = &prev_versions_input;
+
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
+#endif
 
     pvinp->atom = extended_input->atom;
     pvinp->num_atoms = extended_input->num_atoms;
@@ -1403,15 +1410,22 @@ int SetBondProperties( inp_ATOM *at,
 
     /* store the connection */
 
-    /* bond type */ /* djb-rwth: buffer overruns avoided implicitly */ /* djb-rwth: ui_rr? */
-    at[a1].bond_type[n1] =
-        at[a2].bond_type[n2] = cBondType;
+    /* bond type */ /* djb-rwth: fixing buffer overruns */
+    if ((n1 < MAXVAL) && (n2 < MAXVAL))
+    {
+        at[a1].bond_type[n1] =
+            at[a2].bond_type[n2] = cBondType;
         /* connection */
-    at[a1].neighbor[n1] = (AT_NUMB) a2;
-    at[a2].neighbor[n2] = (AT_NUMB) a1;
-    /* stereo */
-    at[a1].bond_stereo[n1] = cStereoType1; /*  >0: the wedge (pointed) end is at this atom */
-    at[a2].bond_stereo[n2] = cStereoType2; /*  <0: the wedge (pointed) end is at the opposite atom */
+        at[a1].neighbor[n1] = (AT_NUMB)a2;
+        at[a2].neighbor[n2] = (AT_NUMB)a1;
+        /* stereo */
+        at[a1].bond_stereo[n1] = cStereoType1; /*  >0: the wedge (pointed) end is at this atom */
+        at[a2].bond_stereo[n2] = cStereoType2; /*  <0: the wedge (pointed) end is at the opposite atom */
+    }
+    else
+    {
+        goto err_exit;
+    }
 
     return 0;
 
@@ -3261,9 +3275,9 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
         if (!iip_tmp || !units_tmp || !uk_al_tmp || !unitk)
         {
             err = 9001;
-            goto exitf;
+            goto preexitf;
         }
-        *iip = iip_tmp;
+        /* *iip = iip_tmp; */
         iip_tmp->n = orp->n;
         iip_tmp->units = units_tmp;
         memset(units_tmp, 0, sizeof( *units_tmp) ); /* djb-rwth: memset_s C11/Annex K variant? */
@@ -3276,7 +3290,7 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
             if (!unitk[k])
             {
                 err = 9001; 
-                goto exitf;
+                goto preexitf;
             }
             iip_tmp->units[k] = unitk[k];
             memset( unitk[k], 0, sizeof(*unitk[k])); /* djb-rwth: memset_s C11/Annex K variant? */
@@ -3296,7 +3310,7 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
             if (!uk_al_tmp[k])
             {
                 err = 9001; 
-                goto exitf;
+                goto preexitf;
             }
             unitk[k]->alist = uk_al_tmp[k];
             for (m = 0; m < unitk[k]->na; m++)
@@ -3310,7 +3324,7 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
                 if (!unitk[k]->blist)
                 {
                     err = 9001;
-                    goto exitf;
+                    goto preexitf;
                 }
                 for (m = 0; m < 2 * groupk->nb; m++)
                 {
@@ -3322,18 +3336,33 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
                 unitk[k]->blist = NULL;
             }
 
-            /* inchi-rs patch: do NOT free unitk[k] / uk_al_tmp[k] here. The
-               upstream oss-fuzz fix (#67695, #66748) freed the very data that
-               is returned through *iip, turning GetStructFromINCHIEx's polymer
-               output into a use-after-free (dangling pointer). These objects
-               are owned by the caller and released later by FreeInChIExtInput
-               (via FreeStructFromINCHIEx); freeing them here is incorrect. */
+            /* inchi-rs patch: do NOT free unitk[k] / uk_al_tmp[k] here.
+               They become *iip->units[k] and *iip->units[k]->alist respectively
+               after the memcpy below; freeing them here turns every polymer unit
+               into a use-after-free (dangling pointer) for the caller. */
         }
-        /* inchi-rs patch: iip_tmp and units_tmp are the returned structure and
-           must survive the call; only the redundant scratch arrays below are
-           safe to release. */
+    /* djb-rwth: avoiding memory leak */
+    preexitf:
+        /* inchi-rs patch: restore the direct pointer assignment that 1.07.5 replaced
+           with a memcpy approach. The memcpy requires *iip to be pre-allocated, but
+           the call site passes &outStruct->polymer which starts NULL, so the memcpy
+           branch is never taken and *iip stays NULL. Assigning *iip = iip_tmp transfers
+           ownership of iip_tmp (and its units_tmp array) to the caller, who releases
+           everything via FreeInChIExtInput / FreeStructFromINCHIEx. */
+        if (!err)
+        {
+            *iip = iip_tmp;
+        }
+        else
+        {
+            inchi_free(iip_tmp);
+        }
         inchi_free(uk_al_tmp);
         inchi_free(unitk);
+        if (err)
+        {
+            goto exitf;
+        }
     }
 
     if (orv)
@@ -3342,7 +3371,8 @@ int SetInChIExtInputByExtOrigAtData( OAD_Polymer     *orp,
         *iiv = (inchi_Input_V3000 *) inchi_calloc( 1, sizeof(inchi_Input_V3000) ); /* djb-rwth: fixing the incorrect type of variable */
         if (!*iiv)
         {
-            err = 9001; goto exitf;
+            err = 9001;
+            goto exitf;
         }
         memset( *iiv, 0, sizeof( **iiv ) ); /* djb-rwth: memset_s C11/Annex K variant? */
 

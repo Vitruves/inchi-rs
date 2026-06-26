@@ -290,11 +290,11 @@ int SortAndPrintINChI( CANON_GLOBALS            *pCG,
             k1 = TAUT_YES; /* in Mobile H order */
             /* store components in Mobile H order */
 
-            for (i = 0; i < num_components[j]; i++)
+            for (i = 0; i < num_components[j] && i < max_num_components; i++) /* djb-rwth: fixing undefined index value / buffer overflow */
             {
 
                 if (pINChISort[j][k1][i].pINChI[TAUT_NON] &&
-                    !pINChISort[j][k1][i].pINChI[TAUT_YES]) /* djb-rwth: ui_rr */
+                    !pINChISort[j][k1][i].pINChI[TAUT_YES])
                 {
                     /* make sure Mobile-H is always present */
                     for (k = 0; k < TAUT_NUM; k++)
@@ -1495,7 +1495,7 @@ int TreatCreateINChIWarning( STRUCT_DATA    *sd,
         /*  save the structure as a problem structure if requested */
         if (ip->bSaveWarningStructsAsProblem && !ip->bSaveAllGoodStructsAsProblem &&
              prb_file->f && 0L <= sd->fPtrStart && sd->fPtrStart < sd->fPtrEnd)
-        {
+        {   /* djb-rwth: addressing coverity ID #499545 -- return values handled properly */
             MolfileSaveCopy( inp_file,
                              sd->fPtrStart,
                              sd->fPtrEnd,

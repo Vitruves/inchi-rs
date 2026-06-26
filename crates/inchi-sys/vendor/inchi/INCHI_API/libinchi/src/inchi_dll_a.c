@@ -1222,12 +1222,12 @@ void INCHI_DECL INCHIGEN_Reset( INCHIGEN_HANDLE _HGen,
                     ( HGen->cti[k] )->at[TAUT_NON] = NULL;
                 }
 
-                if (&( ( HGen->cti[k] )->vt_group_info ))
+                if (&( ( HGen->cti[k] )->vt_group_info )) /* djb-rwth: &((HGen->cti[k])->vt_group_info) will always evaluate to true?  */
                 {
                     free_t_group_info( &( ( HGen->cti[k] )->vt_group_info ) );
                 }
 
-                if (&( ( HGen->cti[k] )->vt_group_info_orig ))
+                if (&( ( HGen->cti[k] )->vt_group_info_orig )) /* djb-rwth: &((HGen->cti[k])->vt_group_info_orig) will always evaluate to true?  */
                 {
                     free_t_group_info( &( ( HGen->cti[k] )->vt_group_info_orig ) );
                 }

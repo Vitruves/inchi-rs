@@ -791,9 +791,9 @@ int TreatErrorsInReadTheStructure( STRUCT_DATA      *sd,
         }
 
 #if ( bRELEASE_VERSION == 1 || EXTR_FLAGS == 0 )
-        if (prb_file->f && 0L <= sd->fPtrStart && sd->fPtrStart < sd->fPtrEnd && !ip->bSaveAllGoodStructsAsProblem)
+        if (prb_file && prb_file->f && 0L <= sd->fPtrStart && sd->fPtrStart < sd->fPtrEnd && !ip->bSaveAllGoodStructsAsProblem)
         {
-            MolfileSaveCopy( inp_file, sd->fPtrStart, sd->fPtrEnd, prb_file->f, *num_inp );
+            MolfileSaveCopy( inp_file, sd->fPtrStart, sd->fPtrEnd, prb_file->f, *num_inp ); /* djb-rwth: addressing coverity ID #499477 -- return values handled properly */
         }
 #endif
     }
@@ -1192,12 +1192,12 @@ int InchiToOrigAtom( INCHI_IOSTREAM *inp_molfile,
                 }
                 if (at_old)
                 {
-                    inchi_free( at_old );
+                    /* inchi_free( at_old ); */ /* djb-rwth: avoiding the use of freed memory */
                     at_old = NULL;
                 }
                 if (szCoordOld)
                 {
-                    inchi_free( szCoordOld );
+                    /* inchi_free( szCoordOld ); */ /* djb-rwth: avoiding the use of freed memory */
                     szCoordOld = NULL;
                 }
                 /*  copy newly read structure */
@@ -1226,7 +1226,7 @@ int InchiToOrigAtom( INCHI_IOSTREAM *inp_molfile,
         }
         if (at_new)
         {
-            inchi_free( at_new );
+            /* inchi_free( at_new ); */ /* djb-rwth: avoiding the use of freed memory */
             at_new = NULL;
         }
     }
@@ -1247,6 +1247,8 @@ int InchiToOrigAtom( INCHI_IOSTREAM *inp_molfile,
      }
      */
 
+    /* djb-rwth: avoiding the use of freed memory */
+    /*
     if (szCoordNew)
     {
         inchi_free( szCoordNew );
@@ -1255,6 +1257,8 @@ int InchiToOrigAtom( INCHI_IOSTREAM *inp_molfile,
     {
         inchi_free( at_new );
     }
+    */
+
     if (!*err && orig_at_data)
     {
         if (ReconcileAllCmlBondParities( orig_at_data->at,
@@ -2036,6 +2040,7 @@ exit_function:
     if (err)
     {
         DiylFrag_Free(pfrag);
+        inchi_free(pfrag); /* djb-rwth: addressing coverity ID #499507 */
         return NULL;
     }
     return pfrag;
@@ -2163,6 +2168,7 @@ int analyze_CRU_folding(ORIG_ATOM_DATA *orig_at_data,
     OAD_PolymerUnit *u = orig_at_data->polymer->units[iunit];
     ITRACE_("\n\n%-s\t\t%-s:%-d", "analyze_CRU_folding()", __FILE__,__LINE__);
 
+    pStrErr[0] = '\0'; /* djb-rwth: fixing coverity ID #499611; pStrErr is a dummy parameter in this function and is never used */
 
     /* Reserve space for frag-specific xclass counts */
     frag_xc_counts = (int *)inchi_calloc((long long)nxclasses + 1, sizeof(int)); /* djb-rwth: cast operator added */
@@ -2182,7 +2188,6 @@ int analyze_CRU_folding(ORIG_ATOM_DATA *orig_at_data,
     }
 
     OAD_PolymerUnit_DebugTrace(u);
-
     OAD_CollectBackboneBonds(orig_at_data,
                             u->na, u->alist,
                             u->end_atom1, u->end_atom2,
@@ -2333,7 +2338,7 @@ int analyze_CRU_folding(ORIG_ATOM_DATA *orig_at_data,
     ITRACE_("\n* Found %-d times foldable unit of %-d fragments\n* First repeating sub-unit formed by %-d-fragment backbone : ",
             n_fold, n_frags, n_frags_in_repeating_subunit);
     
-    for (k = 0; k < n_frags_in_repeating_subunit && frag[k]; k++) /* djb-rwth: fixing a NULL pointer dereference */
+    for (k = 0; k < n_frags_in_repeating_subunit && n_frags_in_repeating_subunit < n_frags && frag[k]; k++) /* djb-rwth: fixing a NULL pointer dereference and buffer overflow */
     {
         if (frag[k]->end1 == frag[k]->end2)
         {
@@ -2374,7 +2379,7 @@ int analyze_CRU_folding(ORIG_ATOM_DATA *orig_at_data,
     */
 
     /*djb-rwth: the whole block had to be rewritten to fix NULL pointer dereference */
-    if (frag[n_frags_in_repeating_subunit] && frag[n_frags_in_repeating_subunit - 1]) /* djb-rwth: fixing a NULL pointer dereference */ /* djb-rwth: ui_rr */
+    if (n_frags_in_repeating_subunit < n_frags && frag[n_frags_in_repeating_subunit] && frag[n_frags_in_repeating_subunit - 1]) /* djb-rwth: fixing a NULL pointer dereference and buffer overflow */
     {
         subunit_last_atom        = frag[n_frags_in_repeating_subunit - 1]->end2;
         next_subunit_first_atom  = frag[n_frags_in_repeating_subunit]->end1;

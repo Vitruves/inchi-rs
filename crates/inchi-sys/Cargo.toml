@@ -14,6 +14,7 @@ categories.workspace = true
 # linked into a single binary (Cargo enforces a single `links = "inchi"` crate).
 links = "inchi"
 build = "build.rs"
+documentation = "https://docs.rs/inchi-sys"
 # Vendored C source is large; ship only what `build.rs` actually compiles plus
 # the metadata files. This keeps the published `.crate` lean and reproducible.
 include = [

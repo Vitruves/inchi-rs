@@ -759,13 +759,20 @@ int fix_odd_things( int num_atoms,
                     /* found both X(-) and X(+); change bonds and remove charges */
                     for (k1 = 0; k1 < at[c].valence && i1 != at[c].neighbor[k1]; k1++)
                         ;
-                    at[i1].charge = at[i2].charge = 0;
-                    at[i1].bond_type[i1_c] = at[c].bond_type[k1] = BOND_TYPE_SINGLE;
-                    at[i1].chem_bonds_valence--;
-                    at[i2].bond_type[i2_c] = at[c].bond_type[k2] = BOND_TYPE_DOUBLE;
-                    at[i2].chem_bonds_valence++;
-                    num_changes++;
-                    break;
+                    if ((i1_c >= 0) && (i2_c >= 0)) /* djb-rwth: fixing coverity ID #499537 */
+                    {
+                        at[i1].charge = at[i2].charge = 0;
+                        at[i1].bond_type[i1_c] = at[c].bond_type[k1] = BOND_TYPE_SINGLE;
+                        at[i1].chem_bonds_valence--;
+                        at[i2].bond_type[i2_c] = at[c].bond_type[k2] = BOND_TYPE_DOUBLE;
+                        at[i2].chem_bonds_valence++;
+                        num_changes++;
+                        break;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
             } /* k2 */
         }
@@ -2062,14 +2069,15 @@ int RemoveInpAtBond( inp_ATOM *atom, int iat, int k )
             }
             if (at->p_parity /* at->valence == MAX_NUM_STEREO_ATOM_NEIGH*/)
             {
-                for (m = 0; m < at->valence; m++)
+                /* p_orig_at_num is a fixed size array of MAX_NUM_STEREO_ATOM_NEIGH (4) elements */
+                for (m = 0; m < at->valence && m < MAX_NUM_STEREO_ATOM_NEIGH; m++) /* djb-rwth: fixing GH PR #72 */
                 {
                     if (atom[(int) at->neighbor[k]].orig_at_number == at->p_orig_at_num[m])
                     {
                         break;
                     }
                 }
-                if (m < at->valence)
+                if (m < at->valence && m < MAX_NUM_STEREO_ATOM_NEIGH) /* djb-rwth: fixing GH PR #72 */
                 {
                     at->p_orig_at_num[m] = at->orig_at_number;
                 }
@@ -2415,7 +2423,7 @@ int DisconnectAmmoniumSalt( inp_ATOM *at,
     /* move 1 H from NH4 to O- or Cl */
 
     /* find non-isotopic or the lightest isotopic H to move from N to O */
-    for (iso_diff = 0; iso_diff <= NUM_H_ISOTOPES; iso_diff++)
+    for (iso_diff = 0; iso_diff <= NUM_H_ISOTOPES; iso_diff++) /* djb-rwth: fixing GH PR #72 */
     {
         if (!iso_diff)
         {
@@ -2435,16 +2443,20 @@ int DisconnectAmmoniumSalt( inp_ATOM *at,
         else
         {
             /* find isotopic H */
-            if (at[iN].num_iso_H[iso_diff])
+            /* num_iso_H has length NUM_H_ISOTOPES; do not access out-of-bounds */
+            if ((iso_diff < NUM_H_ISOTOPES) && at[iN].num_iso_H[iso_diff]) /* djb-rwth: fixing GH PR #72 */
             {
                 at[iN].num_iso_H[iso_diff] --; /* move implicit isotopic H, atw = 1 */
                 at[iO].num_iso_H[iso_diff] ++;
                 break;
             }
-            else if (num_explicit_H[iso_diff])
+            else
             {
-                nMove_H_iso_diff = iso_diff; /* flag: move explicit isotopic H, atw = 1 */
-                break;
+                if (num_explicit_H[iso_diff])
+                {
+                    nMove_H_iso_diff = iso_diff; /* flag: move explicit isotopic H, atw = 1 */
+                    break;
+                }
             }
         }
     }
@@ -2735,7 +2747,7 @@ int bIsMetalToDisconnect( inp_ATOM *at, int i, int bCheckMetalValence )
 
         for (i = 0; i < 2 && ( i & type ); i++)
         {
-            if (at_valence == get_el_valence( at[i].el_number, at[i].charge, i ))
+            if (at_valence == get_el_valence( at[i].el_number, at[i].charge, i )) /* djb-rwth: fixing coverity ID #499532 -- unresolved issue -- revision required */
             {
                 return 2; /* atom has normal valence */
             }
@@ -3932,9 +3944,9 @@ int remove_terminal_HDT( int num_atoms, inp_ATOM *at, int bFixTermHChrg )
                     memmove(new_OtherNeigh_order + num_HydrogenAt, new_OtherNeigh_order, num_OtherNeigh * sizeof(new_OtherNeigh_order[0]));
                     for (k = 0, j = 1; k <= NUM_H_ISOTOPES; k++)
                     {
-                        if (new_HydrogenAt_order[k])
+                        if (new_HydrogenAt_order[k] && (num_HydrogenAt - j < MAXVAL) && (num_HydrogenAt - j >= 0)) /* djb-rwth: fixing buffer overruns */
                         {
-                            new_OtherNeigh_order[num_HydrogenAt - j] = new_HydrogenAt_order[k]; /* djb-rwth: buffer overrun avoided implicitly */
+                            new_OtherNeigh_order[num_HydrogenAt - j] = new_HydrogenAt_order[k];
                             for (m = 0; m < MAX_NUM_STEREO_BONDS && new_at[i].sb_parity[m]; m++)
                             {
                                 if ((int) new_at[i].sn_ord[m] == -( k + 1 ))
@@ -4402,7 +4414,7 @@ int MarkDisconnectedComponents( ORIG_ATOM_DATA *orig_at_data,
     stable sort
     */
 
-    qsort( (void*) component_nbr[0], num_components, sizeof( component_nbr[0] ), cmp_components ); /* djb-rwth: buffer overrun while writing component_nbr[0]? */ /* djb-rwth: ui_rr */
+    qsort( (void*) component_nbr[0], num_components, sizeof( component_nbr[0] ), cmp_components ); /* djb-rwth: fixed buffer overrun */
 
     /* Invert the transposition */
     for (i = 0; i < num_components; i++)
@@ -4880,17 +4892,17 @@ INChI_Aux *Alloc_INChI_Aux( int num_at,
     /* int    bTautomeric = (nAllocMode & REQ_MODE_TAUT); */
 
     if (num_at <= 0 ||
-         NULL == ( pINChI_Aux = (INChI_Aux *) inchi_calloc( sizeof( INChI_Aux ), 1 ) ))
+         NULL == ( pINChI_Aux = (INChI_Aux *) inchi_calloc( 1, sizeof( INChI_Aux ) ) ))
     {
         return NULL;
     }
 
     if (( pINChI_Aux->nOrigAtNosInCanonOrd = (AT_NUMB*)
-          inchi_calloc( sizeof( pINChI_Aux->nOrigAtNosInCanonOrd[0] ), num_at_tg ) ) &&
+          inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nOrigAtNosInCanonOrd[0] ) ) ) &&
           ( pINChI_Aux->nOrigAtNosInCanonOrdInv = (AT_NUMB*)
-            inchi_calloc( sizeof( pINChI_Aux->nOrigAtNosInCanonOrd[0] ), num_at_tg ) ) &&
+            inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nOrigAtNosInCanonOrd[0] ) ) ) &&
             ( pINChI_Aux->nConstitEquNumbers = (AT_NUMB*)
-              inchi_calloc( sizeof( pINChI_Aux->nConstitEquNumbers[0] ), num_at_tg ) ))
+              inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nConstitEquNumbers[0] ) ) ))
     {
         ;
     }
@@ -4900,7 +4912,7 @@ INChI_Aux *Alloc_INChI_Aux( int num_at,
     }
 
     if (num_at > 1 &&
-        ( pINChI_Aux->nConstitEquTGroupNumbers = (AT_NUMB*) inchi_calloc( sizeof( pINChI_Aux->nConstitEquTGroupNumbers[0] ), (long long)num_at / 2 + 1 ) )) /* djb-rwth: cast operator added */
+        ( pINChI_Aux->nConstitEquTGroupNumbers = (AT_NUMB*) inchi_calloc( (long long)num_at / 2 + 1, sizeof( pINChI_Aux->nConstitEquTGroupNumbers[0] ) ) )) /* djb-rwth: cast operator added */
     {
         ;
     }
@@ -4914,14 +4926,14 @@ INChI_Aux *Alloc_INChI_Aux( int num_at,
 
     if (num_at > 0)
     {
-        pINChI_Aux->OrigInfo = (ORIG_INFO *) inchi_calloc( sizeof( pINChI_Aux->OrigInfo[0] ), num_at );
+        pINChI_Aux->OrigInfo = (ORIG_INFO *) inchi_calloc( num_at, sizeof( pINChI_Aux->OrigInfo[0] ) );
         if (!pINChI_Aux->OrigInfo)
             goto out_of_RAM;
     }
 
     if (bOrigCoord && num_at > 0)
     {
-        pINChI_Aux->szOrigCoord = (MOL_COORD *) inchi_calloc( sizeof( pINChI_Aux->szOrigCoord[0] ), num_at );
+        pINChI_Aux->szOrigCoord = (MOL_COORD *) inchi_calloc( num_at, sizeof( pINChI_Aux->szOrigCoord[0] ) );
         if (!pINChI_Aux->szOrigCoord)
             goto out_of_RAM;
     }
@@ -4929,9 +4941,9 @@ INChI_Aux *Alloc_INChI_Aux( int num_at,
     if (bIsotopic)
     {
         if ( /*num_isotopic_atoms &&*/
-            ( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd = (AT_NUMB*) inchi_calloc( sizeof( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd[0] ), num_at_tg ) ) &&
-             ( pINChI_Aux->nIsotopicOrigAtNosInCanonOrdInv = (AT_NUMB*) inchi_calloc( sizeof( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd[0] ), num_at_tg ) ) &&
-             ( pINChI_Aux->nConstitEquIsotopicNumbers = (AT_NUMB*) inchi_calloc( sizeof( pINChI_Aux->nConstitEquIsotopicNumbers[0] ), num_at_tg ) ))
+            ( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd = (AT_NUMB*) inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd[0] ) ) ) &&
+             ( pINChI_Aux->nIsotopicOrigAtNosInCanonOrdInv = (AT_NUMB*) inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nIsotopicOrigAtNosInCanonOrd[0] ) ) ) &&
+             ( pINChI_Aux->nConstitEquIsotopicNumbers = (AT_NUMB*) inchi_calloc( num_at_tg, sizeof( pINChI_Aux->nConstitEquIsotopicNumbers[0] ) ) ))
         {
             ;
         }
@@ -4941,7 +4953,7 @@ INChI_Aux *Alloc_INChI_Aux( int num_at,
         }
 
         if ( /*num_isotopic_atoms && num_at > 1 &&*/
-            ( pINChI_Aux->nConstitEquIsotopicTGroupNumbers = (AT_NUMB*) inchi_calloc( sizeof( pINChI_Aux->nConstitEquIsotopicTGroupNumbers[0] ), (long long)num_at / 2 + 1 ) )) /* djb-rwth: cast operator added */
+            ( pINChI_Aux->nConstitEquIsotopicTGroupNumbers = (AT_NUMB*) inchi_calloc( (long long)num_at / 2 + 1, sizeof( pINChI_Aux->nConstitEquIsotopicTGroupNumbers[0] ) ) )) /* djb-rwth: cast operator added */
         {
             ;
         }
@@ -5028,7 +5040,7 @@ void imat_free( int m, int **a )
     {
         for (i = 0; i < m; i++)
         {
-            if (NULL != a[i]) /* djb-rwth: ui_rr? */
+            if (NULL != a[i]) /* djb-rwth: unresolved issue -- revision required? -- false positive as this function just does the clean-up job */
             {
                 inchi_free( a[i] );
             }
@@ -5163,7 +5175,7 @@ void subgraf_free( subgraf *sg )
     {
         for (i = 0; i < sg->nnodes; i++)
         {
-            if (sg->adj[i]) /* djb-rwth: ui_rr? */
+            if (sg->adj[i]) /* djb-rwth: unresolved issue -- revision required? -- false positive as this function just does the clean-up job */
             {
                 inchi_free( sg->adj[i] );
             }

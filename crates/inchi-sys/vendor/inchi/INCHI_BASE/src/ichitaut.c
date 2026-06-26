@@ -1582,7 +1582,7 @@ int GetNeutralRepsIfNeeded( AT_NUMB      *pri,
          cgi->num_c_groups > 0)
     {
         /* at[ri] and at[rj] belong to the same charge group, at least one is charged   */
-        for (k = 0; k < cgi->num_c_groups; k++) /* MS VC++ 2008 reports unreachable code here ??? */
+        for (k = 0; k < cgi->num_c_groups; k++) /* MS VC++ 2008 reports unreachable code here ??? */ /* djb-rwth: addressing coverity ID #499559 -- read the previous comment; can cgi->num_c_groups only have values 0 and 1? */
         {
             if (cgi->c_group[k].nGroupNumber == c_point)
             {
@@ -3998,8 +3998,8 @@ int MergeSaltTautGroups( CANON_GLOBALS *pCG,
                  /* >C-SH, >C-S(-); S=S,Se,Te */
 
                  /* other proton donor or acceptor */
-                bHasAcidicHydrogen(at, i) && ((s_type = 3), (s_subtype = SALT_p_DONOR)) || /* djb-rwth: ui_rr */
-                bHasAcidicMinus(at, i) && ((s_type = 3), (s_subtype = SALT_p_ACCEPTOR)) /* djb-rwth: ui_rr */
+                (bHasAcidicHydrogen(at, i) && ((s_type = 3), (s_subtype = SALT_p_DONOR))) ||
+                (bHasAcidicMinus(at, i) && ((s_type = 3), (s_subtype = SALT_p_ACCEPTOR)))
                 )
             {
 
@@ -4214,9 +4214,9 @@ int MakeIsotopicHGroup( inp_ATOM *at,
                    /* >C-SH, >C-S(-); S=S,Se,Te */
 
                    /* other proton donor or acceptor */
-                     bHasAcidicHydrogen(at, i) && ((s_type = 3), (s_subtype = SALT_p_DONOR)) || /* djb-rwth: ui_rr */
-                     bHasAcidicMinus(at, i) && ((s_type = 3), (s_subtype = SALT_p_ACCEPTOR)) || /* djb-rwth: ui_rr */
-                     bHasOtherExchangableH(at, i) && ((s_type = 3), (s_subtype = SALT_DONOR_H)))) /* djb-rwth: ui_rr */
+                     (bHasAcidicHydrogen(at, i) && ((s_type = 3), (s_subtype = SALT_p_DONOR))) ||
+                     (bHasAcidicMinus(at, i) && ((s_type = 3), (s_subtype = SALT_p_ACCEPTOR))) ||
+                     (bHasOtherExchangableH(at, i) && ((s_type = 3), (s_subtype = SALT_DONOR_H)))))
 
                      )
             {
@@ -6339,7 +6339,7 @@ int free_t_group_info( T_GROUP_INFO *t_group_info )
     {
         if (t_group_info->t_group)
         {
-            inchi_free( t_group_info->t_group ); /* djb-rwth: false positive oss-fuzz issue #42534728/68286? */
+            inchi_free( t_group_info->t_group );
         }
         if (t_group_info->nEndpointAtomNumber)
         {
@@ -6382,6 +6382,10 @@ int make_a_copy_of_t_group_info( T_GROUP_INFO *t_group_info,
             }
             else
             {
+                if (tgi_tg) /* djb-rwth: avoiding memory leak */
+                {
+                    inchi_free(tgi_tg);
+                }
                 err++;
             }
         }
@@ -6428,6 +6432,15 @@ int make_a_copy_of_t_group_info( T_GROUP_INFO *t_group_info,
             }
             else
             {
+                /* djb-rwth: avoiding memory leaks */
+                if (tgi_niean)
+                {
+                    inchi_free(tgi_niean);
+                }
+                if (tgior_niean)
+                {
+                    inchi_free(tgior_niean);
+                }
                 err++;
             }
         }
@@ -6693,10 +6706,10 @@ int CountTautomerGroups( sp_ATOM *at,
         if ((j = (int) at[i].endpoint)) /* djb-rwth: addressing LLVM warning */
         {
             j = (int) ( at[i].endpoint = nTautomerGroupNumber[j] ) - 1; /*  new t_group number */
-            if (j >= 0)
+            if (j >= 0 && j < num_t) /* djb-rwth: fixing buffer overflow */
             {
                 /*  j=-1 in case of no mobile hydrogen atoms (charges only), group being removed */
-                if (nCurrEndpointAtNoPos[j] >=   /*  debug only */ /* djb-rwth: ui_rr */
+                if (nCurrEndpointAtNoPos[j] >=   /*  debug only */
                      t_group[j].nFirstEndpointAtNoPos + t_group[j].nNumEndpoints)
                 {
                     goto err_exit_function; /*  program error */ /*   <BRKPT> */

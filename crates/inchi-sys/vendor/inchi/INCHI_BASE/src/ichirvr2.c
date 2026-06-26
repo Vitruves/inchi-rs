@@ -110,7 +110,7 @@ int RestoreAtomConnectionsSetStereo( StrFromINChI *pStruct,
                                      INChI *pInChIMobH )
 {
     inp_ATOM_STEREO *st = NULL;
-    int           num_atoms, i, jv, jn, n_vertex, n_neigh, num_H, parity;
+    int           num_atoms, i, jv, jn, n_vertex, n_neigh, num_H, parity, num_atoms_limit;
     int           nNumDeletedH = 0, iDeletedH = 0, idelH1, idelH2, ret = 0, len;
     int           num_stereo_bonds2, num_stereo_centers2; /* djb-rwth: removing redundant variables */
     INChI_Stereo *pStereo = NULL, *pStereo2 = NULL;
@@ -127,6 +127,7 @@ int RestoreAtomConnectionsSetStereo( StrFromINChI *pStruct,
 
         /* atoms */
     at = (inp_ATOM*)inchi_calloc(num_atoms, sizeof(pStruct->at[0]));
+    num_atoms_limit = num_atoms;
     if (!at)
     {
         ret = RI_ERR_ALLOC;
@@ -436,9 +437,8 @@ int RestoreAtomConnectionsSetStereo( StrFromINChI *pStruct,
             inchi_free( at );
             pStruct->at = at = at2;
             /* fill out deleted H atom info */
-            for (i = num_atoms; i < num_atoms + nNumDeletedH; i++)
+            for (i = num_atoms; i < num_atoms + nNumDeletedH; i++) /* djb-rwth: unresolved issue -- revision required? -- buffer overrun cannot happen, loop not executed for nNumDeletedH <= 0 */
             {
-                /* djb-rwth: ui_rr */
                 strcpy( at[i].elname, "H" );
                 at[i].el_number = EL_NUMBER_H;
                 at[i].orig_at_number = iAtNoOffset + i + 1;
@@ -567,7 +567,7 @@ int RestoreAtomConnectionsSetStereo( StrFromINChI *pStruct,
             jv = pStereo->nBondAtom1[i] - 1;
             jn = pStereo->nBondAtom2[i] - 1;
             parity = pStereo->b_parity[i];
-            if (!is_in_the_list( at[jv].neighbor, (AT_NUMB) jn, at[jv].valence ))
+            if ((jv < num_atoms) && !is_in_the_list( at[jv].neighbor, (AT_NUMB) jn, at[jv].valence )) /* djb-rwth: fixing GHI #126/16 */
             {
                 /* must be a cumulene */
                 if (!bFindCumuleneChain( at, (AT_NUMB) jv, (AT_NUMB) jn, nCumulene, MAX_CUMULENE_LEN + 1 ))
@@ -1859,8 +1859,9 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
     int num_at = pStruct->num_atoms;
     int num_deleted_H = pStruct->num_deleted_H;
     int len_at = num_at + num_deleted_H;
+    int local_num_vertices = pBNS->num_vertices; /* djb-rwth: addressing LLVM warning */
 
-    for (i = pBNS->num_atoms, num_rad_not_atom = 0; i < pBNS->num_vertices; i++)
+    for (i = pBNS->num_atoms, num_rad_not_atom = 0; i < local_num_vertices; i++)
     {
         num_rad_not_atom += pBNS->vert[i].st_edge.cap - pBNS->vert[i].st_edge.flow;
     }
@@ -1875,14 +1876,14 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
     /****************************************************/
 
     /* allocate memory to keep track of moved radicals */
-    pnRad = (S_SHORT *) inchi_malloc( pBNS->num_vertices * sizeof( pnRad[0] ) );
+    pnRad = (S_SHORT *) inchi_malloc(local_num_vertices * sizeof( pnRad[0] ) );
     pnDelta = (S_SHORT *) inchi_calloc( pBNS->num_atoms, sizeof( pnDelta[0] ) );
     if (!pnRad || !pnDelta)
     {
         ret = RI_ERR_ALLOC;
         goto exit_function;
     }
-    for (i = 0; i < pBNS->num_vertices; i++)
+    for (i = 0; i < local_num_vertices; i++)
     {
         pnRad[i] = pBNS->vert[i].st_edge.cap - pBNS->vert[i].st_edge.flow;
     }
@@ -1962,7 +1963,7 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
     {
         /* find reqired charge */
         extra_charge = 0;
-        for (i = pBNS->num_atoms, pv = pBNS->vert + i; i < pBNS->num_vertices; i++, pv++)
+        for (i = pBNS->num_atoms, pv = pBNS->vert + i; i < local_num_vertices; i++, pv++)
         {
             if ((delta = pv->st_edge.cap - pv->st_edge.flow)) /* djb-rwth: addressing LLVM warning */
             {
@@ -1988,7 +1989,7 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
         }
         /* find differences */
         num_candidates = 0;
-        for (i = 0; i < pBNS->num_vertices; i++)
+        for (i = 0; i < local_num_vertices; i++)
         {
             pnRad[i] = ( pBNS->vert[i].st_edge.cap - pBNS->vert[i].st_edge.flow ); /* djb-rwth: garbage values on the right side of - -- discussion required; pnRad[i] = ( pBNS->vert[i].st_edge.cap - pBNS->vert[i].st_edge.flow ) - pnRad[i]; */
             if (pnRad[i] > 0 && i < pBNS->num_atoms && !pVA[i].nTautGroupEdge)
@@ -1997,7 +1998,7 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
             }
         }
     }
-    if (num_candidates > 0)
+    if (num_moved && num_candidates > 0) /* djb-rwth: fixing a NULL pointer dereference */
     {
         pCand = (CC_CAND *) inchi_calloc( num_candidates, sizeof( pCand[0] ) );
         if (!pCand)
@@ -2016,9 +2017,9 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
             goto exit_function;
         }
 
-        for (i = 0, j = 0; i < pBNS->num_vertices; i++)
+        for (i = 0, j = 0; i < local_num_vertices; i++)
         {
-            if (pnRad[i] > 0 && i < pBNS->num_atoms && !pVA[i].nTautGroupEdge) /* djb-rwth: ignoring LLVM warning as pnRad is initialised above */
+            if (pnRad[i] > 0 && i < pBNS->num_atoms && !pVA[i].nTautGroupEdge)
             {
                 pCand[j].iat = i;
                 pCand[j].num_bonds = at2[i].valence;
@@ -2052,7 +2053,7 @@ int MoveRadToAtomsAddCharges( BN_STRUCT *pBNS,
             added_charge += this_atom_add_charge;
             if (this_atom_add_charge)
             {
-                for (i = pBNS->num_vertices - 1, pv = pBNS->vert + i; this_atom_add_charge && pBNS->num_atoms <= i; i--, pv--)
+                for (i = local_num_vertices - 1, pv = pBNS->vert + i; this_atom_add_charge && pBNS->num_atoms <= i; i--, pv--)
                 {
                     if ((delta = pv->st_edge.cap - pv->st_edge.flow)) /* djb-rwth: addressing LLVM warning */
                     {

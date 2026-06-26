@@ -3829,14 +3829,24 @@ int CanonGraph( INCHI_CLOCK *ic,
     }
     ok = 1;
 
-
     ok &= UnorderedPartitionCreate( &theta, n_tg );
     ok &= UnorderedPartitionCreate( &theta_from_gamma, n_tg );
 
+    /* djb-rwth: fixing dereferencing NULL pointer and buffer overflows */
+    W = (Cell*) inchi_calloc( n_tg, sizeof( W[0] ) );
+    v = (Node*) inchi_calloc( n_tg, sizeof( v[0] ) );
+    e = (S_CHAR*) inchi_calloc( n_tg, sizeof( e[0] ) );
+
+    if (!W || !v || !e)
+    {
+        ok &= 0;
+    }
+
+/*
     ok &= ( NULL != ( W = (Cell*) inchi_calloc( n_tg, sizeof( W[0] ) ) ) );
     ok &= ( NULL != ( v = (Node*) inchi_calloc( n_tg, sizeof( v[0] ) ) ) );
     ok &= ( NULL != ( e = (S_CHAR*) inchi_calloc( n_tg, sizeof( e[0] ) ) ) );
-
+*/
     /*
     ok &= (NULL != (v   = (Node*)inchi_calloc( n_tg, sizeof(W[0]))));
     ok &= (NULL != (e   = (S_CHAR*)inchi_calloc( n_tg, sizeof(W[0]))));
@@ -3915,8 +3925,8 @@ int CanonGraph( INCHI_CLOCK *ic,
         /* the two next lines intentionally switched */
         /* Create equitable partition in pi[k]  */
         PartitionGetFirstCell( &pi[k - 1], W, k, n );
-        v[k - 1] = CellGetMinNode( &pi[k - 1], &W[k - 1], 0, pCD1 ); /* djb-rwth: ui_rr? */
-        e[k - 1] = 0; /* djb-rwth: ui_rr? */
+        v[k - 1] = CellGetMinNode( &pi[k - 1], &W[k - 1], 0, pCD1 );
+        e[k - 1] = 0;
         if (dig || !PartitionSatisfiesLemma_2_25( &pi[k - 1], n ))
         {
             t_Lemma = k + 1;
@@ -4451,7 +4461,7 @@ L14:
     {
         index++;
     }
-    v[k - 1] = CellGetMinNode( &pi[k - 1], &W[k - 1], v[k - 1], pCD1 ); /* djb-rwth: ui_rr? */
+    v[k - 1] = CellGetMinNode( &pi[k - 1], &W[k - 1], v[k - 1], pCD1 );
 
     if (v[k - 1] == INCHI_CANON_INFINITY)
     {
@@ -4591,7 +4601,7 @@ exit_function:
     {
         *nLenCt = pzb_rho->lenCt - 1;
     }
-    if (pCt && pzb_rho)
+    if (pCt && pzb_rho && (*nLenCt > 0)) /* djb-rwth: GHI #164 fix */
     {
         memcpy(pCt, pzb_rho->Ctbl, *nLenCt * sizeof(pCt[0]));
     }

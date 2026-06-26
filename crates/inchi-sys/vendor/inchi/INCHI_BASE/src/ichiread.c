@@ -41,6 +41,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <locale.h>
 
 /* #define CHECK_WIN32_VC_HEAP */
 
@@ -700,6 +701,12 @@ int ReadWriteInChI(INCHI_CLOCK* ic,
         if (pTmpOut->s.pStr)
             pRealOut = pTmpOut;
     }
+
+#ifdef GHI100_FIX
+#if ((SPRINTF_FLAG != 1) && (SPRINTF_FLAG != 2))
+    setlocale(LC_ALL, "en-US"); /* djb-rwth: setting all locales to "en-US" */
+#endif
+#endif
 
     memset(szMessage, 0, sizeof(szMessage)); /* djb-rwth: memset_s C11/Annex K variant? */
     memset(&OneInput, 0, sizeof(OneInput)); /* djb-rwth: memset_s C11/Annex K variant? */
@@ -2958,7 +2965,7 @@ int InChILine2Data(INCHI_IOSTREAM* pInp,
                                                 /* create two zero/NULL-initialized isotopic stereo if they do not exist */
                                                 if ((!pInChI->StereoIsotopic && 0 > (ret2 = CopySegment(pInChI, pAltInChI, CPY_SP3_M, 1, -1)))
                                                     /* -- the following will be created later, in TAUT_YES part of the code -- */
-                                                    || (!pAltInChI->StereoIsotopic && 0 > (ret2 = CopySegment(pAltInChI, pAltInChI, CPY_SP3_M, 1, -1)))) /* djb-rwth: addressing LLVM warnings */
+                                                    || (!pAltInChI->StereoIsotopic && 0 > (ret2 = CopySegment(pAltInChI, pAltInChI, CPY_SP3_M, 1, -1)))) /* djb-rwth: addressing LLVM warnings */ /* djb-rwth: addressing coverity ID #499533 -- unresolved issue -- revision required */
                                                 {
                                                     goto exit_function;
                                                 }
@@ -4029,7 +4036,7 @@ int ParseAuxSegmentNumbers(const char* str,               /* AuxInfo string     
             {
                 for (k = 0; k < val; k++)
                 {
-                    CopyAtomNumbers(pInChI + k, bIso, pInChI_From + k, bIso_From);
+                    CopyAtomNumbers(pInChI + k, bIso, pInChI_From + k, bIso_From); /* djb-rwth: addressing coverity ID #499525 -- return values handled properly */
                 }
             }
             mpy_component = val;
@@ -4980,7 +4987,14 @@ int ReadInChICoord(INCHI_IOSTREAM* pInp,
         }
     } while (c >= 0);
 
-    ret = AddAuxSegmentCoord(ret, pXYZ, nLenXYZ, pInpInChI, nNumComponents);
+    if (pXYZ) /* djb-rwth: fixing coverity ID #499576 */
+    {
+        ret = AddAuxSegmentCoord(ret, pXYZ, nLenXYZ, pInpInChI, nNumComponents);
+    }
+    else
+    {
+        ret = RI_ERR_ALLOC;
+    }
 
 exit_error:
     if (pXYZ)
@@ -5798,7 +5812,7 @@ int ParseSegmentIsoAtoms(const char* str,
 {
     int i, mpy_component, val;
     int nNumComponents, iComponent, len = 0, iAtom;
-    AT_NUMB nAtom1;
+    int nAtom1; /* djb-rwth: fixing coverity ID #499573 */
     const char* p, * q, * t, * pStart, * pEnd, * r;
     int  ret = 0;
     INChI* pInChI = pInpInChI[bMobileH];
@@ -6426,7 +6440,7 @@ int ParseSegmentSp3m(const char* str,
                 }
             }
         }
-        if (bMobileHFrom < 0 || bIsoFrom < 0)
+        if (bMobileHFrom < 0 || bIsoFrom < 0) /* djb-rwth: addressing coverity ID #499556 -- check necessary due to initialisation values */
         {
             return RI_ERR_PROGR;
         }
@@ -6857,7 +6871,7 @@ int ParseSegmentSp2(const char* str,
     int* pbAbc)
 {
     /* Pass 1: count bonds and find actual numbers of  atom */
-    int i, mpy_component, val;
+    int i, mpy_component, val, len_limit;
     int nNumComponents, iComponent, len, iBond;
     AT_NUMB nAtom1, nAtom2;
     int     bondParity;
@@ -7079,7 +7093,7 @@ int ParseSegmentSp2(const char* str,
                     ret = RI_ERR_SYNTAX; /* syntax error */
                     goto exit_function;
                 }
-                if (NULL == pInChIFrom || NULL == pInChIFrom + iComponent + i)
+                if (NULL == pInChIFrom || NULL == pInChIFrom + iComponent + i) /* djb-rwth: ignoring GCC warning */
                 {
                     ret = RI_ERR_SYNTAX; /* syntax error */
                     goto exit_function;
@@ -7247,6 +7261,7 @@ int ParseSegmentSp2(const char* str,
             goto exit_function;
         }
         /* allocate sp2 stereo */
+        len_limit = len + 1;
         if (!(pStereo[0]->b_parity = (S_CHAR*)inchi_calloc((long long)len + 1, sizeof(pStereo[0]->b_parity[0]))) ||
             !(pStereo[0]->nBondAtom1 = (AT_NUMB*)inchi_calloc((long long)len + 1, sizeof(pStereo[0]->nBondAtom1[0]))) ||
             !(pStereo[0]->nBondAtom2 = (AT_NUMB*)inchi_calloc((long long)len + 1, sizeof(pStereo[0]->nBondAtom2[0])))) /* djb-rwth: cast operators added */
@@ -7339,10 +7354,18 @@ int ParseSegmentSp2(const char* str,
                 }
                 p = q + 1;
                 bondParity = (int)(r - parity_type) + 1;
-                /* djb-rwth: ui_rr? */
-                pStereo[0]->b_parity[iBond] = bondParity;
-                pStereo[0]->nBondAtom1[iBond] = nAtom1;
-                pStereo[0]->nBondAtom2[iBond] = nAtom2;
+                /* djb-rwth: preventing buffer overrun */
+                if (iBond < len_limit)
+                {
+                    pStereo[0]->b_parity[iBond] = bondParity;
+                    pStereo[0]->nBondAtom1[iBond] = nAtom1;
+                    pStereo[0]->nBondAtom2[iBond] = nAtom2;
+                }
+                else
+                {
+                    ret = RI_ERR_PROGR;
+                    goto exit_function;
+                }
 
                 if (iBond &&
                     !(pStereo[0]->nBondAtom1[iBond - 1] < nAtom1 ||
@@ -7480,7 +7503,7 @@ int ParseSegmentPolymer(const char* str,
 {
     const char* p, * q, * pStart, * pEnd, * p0;
     char  comma = ',', dot = '.', dash = '-', lt_par = '(', rt_par = ')';
-    int         iunit, val, ret, prev, is_range;
+    int         iunit, val, ret, prev, is_range, pdn_limit;
     int         curr_atom, type = -1, subtype = -1, conn = -1;
     AT_NUMB     num_atom;
     INT_ARRAY   alist;
@@ -7526,6 +7549,7 @@ int ParseSegmentPolymer(const char* str,
     }
     pd->units = (OAD_PolymerUnit**)
         inchi_calloc(pd->n, sizeof(OAD_PolymerUnit*));
+    pdn_limit = pd->n;
     if (!pd->units)
     {
         ret = RI_ERR_ALLOC; goto exit_function;
@@ -7672,7 +7696,16 @@ int ParseSegmentPolymer(const char* str,
             {
                 ret = RI_ERR_ALLOC; goto exit_function;
             }
-            pd->units[iunit] = unit;
+            /* djb-rwth: preventing buffer overrun */
+            if (iunit < pdn_limit)
+            {
+                pd->units[iunit] = unit;
+            }
+            else
+            {
+                ret = RI_ERR_PROGR;
+                goto exit_function;
+            }
             IntArray_Reset(&alist);
             iunit++;
         }
@@ -8208,7 +8241,7 @@ int ParseSegmentMobileH(const char* str,
     int num_H_component, num_H_formula, num_taut_H_component, num_H_InChI, ret2;
     int nNumComponents, iComponent, lenTautomer, tg_pos_Tautomer, iTGroup; /* djb-rwth: removing redundant variables */
     const char* p, * q, * h, * t, * p1, * pTaut, * pStart, * pEnd;
-    AT_NUMB curAtom, nxtAtom;
+    int curAtom, nxtAtom; /* djb-rwth: fixing coverity ID #499563 */
     int  state, ret, nAltMobileH = ALT_TAUT(bMobileH); /* djb-rwth: removing redundant variables */
     INChI* pInChI = pInpInChI[bMobileH];
     INChI* pAltInChI = pInpInChI[nAltMobileH];
@@ -8887,7 +8920,7 @@ int ParseSegmentMobileH(const char* str,
                             pInChI[iComponent].nTautomer[tg_pos_Tautomer + 2] = num_Minus;
                             lenTautomer = tg_pos_Tautomer + 3; /* first atom number position */
                             /* djb-rwth: fixing GH issue #59.1 */
-                            if (num_H >= INT_MIN && num_H <= INT_MAX)
+                            if (num_H >= INT_MIN && num_H <= INT_MAX) /* djb-rwth: addressing coverity ID #499582 -- boundary check is required */
                             {
                                 num_taut_H_component += num_H;
                             }
@@ -10020,9 +10053,15 @@ int ParseSegmentFormula(const char* str,
                 inchi_free(pInChI[iComponent + i].szHillFormula);
             }
             pInChI[iComponent + i].szHillFormula = (char*)inchi_malloc(inchi_max((long long)len, 1) + 1); /* djb-rwth: cast operator added */
-            memcpy(pInChI[iComponent].szHillFormula, p, len);
             if (pInChI[iComponent + i].szHillFormula) /* djb-rwth: fixing a NULL pointer dereference */
+            {
+                memcpy(pInChI[iComponent].szHillFormula, p, len);
                 pInChI[iComponent + i].szHillFormula[len] = '\0';
+            }
+            else
+            {
+                return RI_ERR_ALLOC; /* djb-rwth: memory could not be allocated */
+            }
             if (!i)
             {
                 /* Pass 2.1 Parse formula and count atoms except H */
@@ -10156,7 +10195,7 @@ int ParseSegmentFormula(const char* str,
             {
                 U_CHAR* pci1 = NULL;  /* copied from below to obey C syntax - 2024-09-01 DT */
                 /* Copy duplicated formula */
-                strcpy(pInChI[iComponent + i].szHillFormula, pInChI[iComponent].szHillFormula);
+                strcpy(pInChI[iComponent + i].szHillFormula, pInChI[iComponent].szHillFormula); /* djb-rwth: unresolved issue -- revision required? */
                 /* Copy atoms in the duplicated formula */
                 pInChI[iComponent + i].nNumberOfAtoms = nNumAtoms;
                 /* djb-rwth: fixing oss-fuzz issue #43420, #34772 */
@@ -10630,7 +10669,7 @@ exit_function:
 
     INCHI_HEAPCHK
 
-        return c;
+        return c; /* djb-rwth: addressing coverity ID #499500 -- c = getInChIChar(pInp) cannot be tainted */
 }
 
 /****************************************************************************/
@@ -10758,6 +10797,7 @@ void PrepareSaveOptBits(INPUT_PARMS* ip,
     else
     {
         /* Analyze existing and prepare new SaveOpt appendix */
+        /* djb-rwth: addressing coverity ID #499490 -- these are variable initialisers setting values to 0 */
         int input_save_opt_has_recmet = input_save_opt_bits & SAVE_OPT_RECMET;
         int input_save_opt_has_fixedh = input_save_opt_bits & SAVE_OPT_FIXEDH;
         int input_save_opt_has_suu = input_save_opt_bits & SAVE_OPT_SUU;
@@ -11639,6 +11679,10 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
 
     /* Check formula */
     p = strchr(p, '/');
+    if (!p) /* djb-rwth: fixing coverity ID #499505 */
+    {
+        goto endf;
+    }
     p++;
     pend = strchr(p, '/');
     ntimes = 1;
@@ -11837,7 +11881,7 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
 
     /* Edits */
     nc = 0;
-    nc_max = slen * 100 + 32 * 10 * ninsert;
+    nc_max = slen * 100 + 32 * 10 * ninsert; /* djb-rwth: fixing oss-fuzz issue #384549256 */
     kinsert = 0;
     star0 = nheavy + 1;
     for (i = 0; i < slen; i++)
@@ -11858,12 +11902,15 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
             kinsert++;
             for (j = 0; j < (int)strlen(tmpstr); j++)
             {
-                edited_s[nc] = tmpstr[j];
-                nc++;
+                if (nc < nc_max)
+                {
+                    edited_s[nc] = tmpstr[j];
+                    nc++;
+                }
             }
         }
 
-        if (i == i_last_sym)
+        if ((i == i_last_sym) && (nc < nc_max))
         {
             edited_s[nc++] = s[i];
         }
@@ -11885,7 +11932,6 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
                 }
                 for (j = 0; j < nstars; j++)
                 {
-                    /* djb-rwth: fixing oss-fuzz issue #384549256 */
                     if (nc < nc_max)
                     {
                         edited_s[nc++] = addon;
@@ -11899,8 +11945,11 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
                     sprintf(tmpstr, ".%dZz", nstars);
                     for (j = 0; j < (int)strlen(tmpstr); j++)
                     {
-                        edited_s[nc] = tmpstr[j];
-                        nc++;
+                        if (nc < nc_max)
+                        {
+                            edited_s[nc] = tmpstr[j];
+                            nc++;
+                        }
                     }
                 }
             }
@@ -11914,10 +11963,16 @@ int DetectAndExposePolymerInternals(INCHI_IOSTREAM* is)
                 break;
             }
         }
-        edited_s[nc] = s[i];
-        nc++;
+        if (nc < nc_max)
+        {
+            edited_s[nc] = s[i];
+            nc++;
+        }
     }
-    edited_s[nc] = '\0';
+    if (nc < nc_max)
+    {
+        edited_s[nc] = '\0';
+    }
     inchi_strbuf_close(&is->s);
     inchi_ios_print(is, "%-s%-s\n", edited_s, s2 ? s2 : "");
 
@@ -12259,7 +12314,7 @@ static int SegmentSp3ProcessAbbreviation(int* mpy_component,
                 if (*q == 'e')
                 {
                     /* copy from mobile H to isotopic mobile H */
-                    pInChIFrom = pInChI;
+                    pInChIFrom = pInChI; /* djb-rwth: addressing coverity ID #499498 -- definitely not a copy-paste error */
                     bIsoTo = 1;
                     bIsoFrom = -1; /* empty */
                 }
