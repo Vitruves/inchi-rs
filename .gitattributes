@@ -1,0 +1,3 @@
+# Keep test fixtures with LF endings so parsing is deterministic across platforms.
+*.sdf text eol=lf
+*.mol text eol=lf

@@ -174,10 +174,14 @@ fn regenerate_bindings(base: &Path) {
         .allowlist_function("GetStringLength")
         .allowlist_function("Free_(std_)?inchi_Input")
         .allowlist_function("Get_(std_)?inchi_Input_FromAuxInfo")
+        // IXA extensible API (inchi_api.h includes ixa.h).
+        .allowlist_function("IXA_.*")
         .allowlist_type("inchi_.*")
         .allowlist_type("RetVal.*")
         .allowlist_type("INCHI_.*")
+        .allowlist_type("IXA_.*")
         .allowlist_var("INCHI_.*")
+        .allowlist_var("IXA_.*")
         .allowlist_var(
             "(MAXVAL|NO_ATOM|ATOM_EL_LEN|NUM_H_ISOTOPES|ISOTOPIC_SHIFT_FLAG|ISOTOPIC_SHIFT_MAX)",
         )

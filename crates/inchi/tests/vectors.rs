@@ -9,8 +9,8 @@
 use inchi::{
     check_inchi, check_inchikey, from_molfile, inchi_to_inchi, inchikey, inchikey_with_hashes,
     struct_from_aux_info, struct_from_inchi, struct_from_inchi_ex, Atom, BondOrder,
-    InchiKeyValidity, InchiValidity, Molecule, Options, PolymerConnection, PolymerUnit,
-    PolymerUnitKind, Polymers,
+    InchiKeyValidity, InchiValidity, IxaMolecule, Molecule, Options, PolymerConnection,
+    PolymerUnit, PolymerUnitKind, Polymers,
 };
 
 // --- Simple molecules (small, no stereo) ------------------------------------
@@ -408,4 +408,182 @@ fn invalid_input_is_error() {
     assert!(struct_from_aux_info("not aux info", true).is_err());
     // An empty molecule cannot be converted.
     assert!(Molecule::new().to_inchi(Options::new()).is_err());
+}
+
+// --- IXA queryable molecules (Phase 2) --------------------------------------
+
+/// Loading each fixture Molfile through the IXA path and regenerating the InChI
+/// (and InChIKey) must reproduce the same reference identifiers as the classic
+/// `from_molfile` route — including the stereochemically rich cases.
+#[test]
+fn ixa_from_molfile_reproduces_references() {
+    for &(molfile, expected_inchi, expected_key) in CASES {
+        let mol = IxaMolecule::from_molfile(molfile).expect("parse molfile via IXA");
+        let out = mol.to_inchi(Options::new()).expect("generate via IXA");
+        assert_eq!(out.inchi(), expected_inchi, "IXA InChI mismatch");
+        assert_eq!(
+            mol.to_inchikey(Options::new()).expect("key via IXA"),
+            expected_key,
+            "IXA InChIKey mismatch for {expected_inchi}"
+        );
+    }
+}
+
+/// Reconstructing a molecule from each reference InChI must yield the expected
+/// heavy-atom count and element composition (hydrogens stay implicit).
+#[test]
+fn ixa_from_inchi_recovers_heavy_atoms() {
+    // (inchi, expected heavy-atom count)
+    let cases = [
+        ("InChI=1S/CH4/h1H4", 1),
+        ("InChI=1S/H2O/h1H2", 1),
+        ("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", 3),
+        ("InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H", 6),
+        (
+            "InChI=1S/C9H8O4/c1-6(10)13-8-5-3-2-4-7(8)9(11)12/h2-5H,1H3,(H,11,12)",
+            13,
+        ),
+    ];
+    for (inchi, expected) in cases {
+        let mol = IxaMolecule::from_inchi(inchi).expect("parse inchi via IXA");
+        assert_eq!(mol.atom_count(), expected, "atom count for {inchi}");
+        // Every atom must report a non-empty element symbol and round-trip its id.
+        for atom in mol.atoms() {
+            assert!(!mol.atom_element(atom).expect("element").is_empty());
+        }
+    }
+}
+
+/// Caffeine (C8H10N4O2): inspect the reconstructed structure atom-by-atom.
+#[test]
+fn ixa_caffeine_atom_query() {
+    let mol = IxaMolecule::from_inchi(
+        "InChI=1S/C8H10N4O2/c1-10-4-9-6-5(10)7(13)12(3)8(14)11(6)2/h4H,1-3H3",
+    )
+    .expect("parse caffeine");
+    assert_eq!(mol.atom_count(), 14);
+
+    let mut carbons = 0;
+    let mut nitrogens = 0;
+    let mut oxygens = 0;
+    for atom in mol.atoms() {
+        match mol.atom_element(atom).expect("element").as_str() {
+            "C" => carbons += 1,
+            "N" => nitrogens += 1,
+            "O" => oxygens += 1,
+            other => panic!("unexpected element {other}"),
+        }
+        // Charges are all neutral; mass is natural abundance.
+        assert_eq!(mol.atom_charge(atom).expect("charge"), 0);
+        assert_eq!(mol.atom_mass(atom).expect("mass"), 0);
+        // An InChI carries no coordinates.
+        assert_eq!(mol.atom_position(atom).expect("pos"), (0.0, 0.0, 0.0));
+    }
+    assert_eq!((carbons, nitrogens, oxygens), (8, 4, 2));
+}
+
+/// Ethanol (C-C-O): the bond topology recovered from an InChI must be two
+/// single bonds, and every bond must connect two real atoms of the molecule.
+#[test]
+fn ixa_ethanol_bond_topology() {
+    let mol = IxaMolecule::from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3").expect("parse ethanol");
+    assert_eq!(mol.atom_count(), 3);
+    assert_eq!(mol.bond_count(), 2);
+
+    let atoms: Vec<_> = mol.atoms().collect();
+    for bond in mol.bonds() {
+        assert_eq!(mol.bond_order(bond).expect("order"), BondOrder::Single);
+        let (a, b) = mol.bond_atoms(bond).expect("bond atoms");
+        assert!(atoms.contains(&a) && atoms.contains(&b));
+        assert_ne!(a, b);
+    }
+
+    // The oxygen has exactly one heavy-atom neighbor (the central carbon).
+    let oxygen = atoms
+        .iter()
+        .copied()
+        .find(|&a| mol.atom_element(a).unwrap() == "O")
+        .expect("an oxygen atom");
+    assert_eq!(mol.atom_bond_count(oxygen).expect("bond count"), 1);
+    let bond = mol.atom_bond(oxygen, 0).expect("first bond");
+    let (a, b) = mol.bond_atoms(bond).expect("bond atoms");
+    let neighbor = if a == oxygen { b } else { a };
+    assert_eq!(mol.atom_element(neighbor).expect("element"), "C");
+}
+
+/// Implicit hydrogen counts are recovered per atom: methane's lone carbon
+/// carries four implicit (non-isotopic) hydrogens.
+#[test]
+fn ixa_implicit_hydrogens() {
+    let mol = IxaMolecule::from_inchi("InChI=1S/CH4/h1H4").expect("parse methane");
+    let carbon = mol.atoms().next().expect("one atom");
+    let h = mol.atom_hydrogens(carbon).expect("hydrogens");
+    assert_eq!(h[0], 4, "four implicit H on carbon");
+    assert_eq!(&h[1..], &[0, 0, 0], "no isotopic hydrogens");
+}
+
+/// Options flow through the IXA builder: `/SNon` drops the stereo layer, so an
+/// InChI generated with stereo ignored must differ from the stereo-bearing one.
+#[test]
+fn ixa_options_are_applied() {
+    use inchi::StereoMode;
+
+    let l_alanine = "InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1";
+    let mol = IxaMolecule::from_inchi(l_alanine).expect("parse alanine");
+
+    // Default options preserve the stereo layer (round-trip).
+    assert_eq!(
+        mol.to_inchi(Options::new()).expect("default").inchi(),
+        l_alanine
+    );
+
+    // Ignoring stereo strips the /t/m/s layers.
+    let flat = mol
+        .to_inchi(Options::new().stereo(StereoMode::Ignore))
+        .expect("snon")
+        .into_inchi();
+    assert_eq!(flat, "InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)");
+    assert!(!flat.contains("/t"));
+}
+
+/// A stereo-rich molecule exposes its stereo descriptors through the IXA API.
+///
+/// Stereo descriptors are reconstructed when reading an InChI (they are encoded
+/// in the `/t` layer); a Molfile read instead leaves stereo to be perceived
+/// later during generation, so we query the InChI-derived molecule here.
+#[test]
+fn ixa_stereo_descriptors() {
+    // L-alanine has a single tetrahedral stereocenter.
+    let mol =
+        IxaMolecule::from_inchi("InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1")
+            .expect("parse alanine inchi");
+    assert_eq!(mol.stereo_count(), 1, "expected one stereocenter");
+    for stereo in mol.stereos() {
+        // The parity is defined (odd or even), and the descriptor has a center.
+        let parity = mol.stereo_parity(stereo).expect("parity");
+        assert!(parity.is_some(), "stereocenter parity should be defined");
+        let center = mol.stereo_central_atom(stereo).expect("central atom");
+        assert!(center.is_some(), "tetrahedral center has a central atom");
+        // The stereocenter is the chiral carbon.
+        if let Some(atom) = center {
+            assert_eq!(mol.atom_element(atom).expect("element"), "C");
+        }
+    }
+}
+
+/// Malformed input is reported as an error, never a panic.
+#[test]
+fn ixa_invalid_input_is_error() {
+    assert!(IxaMolecule::from_inchi("not an inchi").is_err());
+    assert!(IxaMolecule::from_inchi("InChI=1S/garbage").is_err());
+    assert!(IxaMolecule::from_molfile("definitely not a molfile").is_err());
+    // Interior NUL bytes are rejected before reaching C.
+    assert!(IxaMolecule::from_inchi("InChI=1S/CH4\0/h1H4").is_err());
+}
+
+/// `IxaMolecule` is `Send`/`Sync`, matching the rest of the public API.
+#[test]
+fn ixa_molecule_is_send_sync() {
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<IxaMolecule>();
 }

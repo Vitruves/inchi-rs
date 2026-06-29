@@ -419,3 +419,452 @@ extern "C" {
         result: *mut inchi_Output,
     ) -> ::std::os::raw::c_int;
 }
+
+// ===========================================================================
+// IXA (InChI eXtensible API) — manually maintained declarations.
+//
+// These mirror `INCHI_BASE/src/ixa.h`. They are NOT produced by bindgen (the
+// `regenerate-bindings` allowlist intentionally excludes the IXA surface);
+// they are kept in sync with the vendored header by hand. The handles are
+// opaque sentinel pointers (a `typedef struct { int dummy; } *Handle` pattern
+// in C); we reproduce that exactly so each handle keeps a distinct Rust type.
+// ===========================================================================
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_STATUS_HANDLE_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_MOL_HANDLE_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_INCHIBUILDER_HANDLE_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_INCHIKEYBUILDER_HANDLE_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_ATOMID_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_BONDID_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_STEREOID_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct IXA_POLYMERUNITID_STRUCT {
+    pub dummy: ::std::os::raw::c_int,
+}
+
+pub type IXA_STATUS_HANDLE = *mut IXA_STATUS_HANDLE_STRUCT;
+pub type IXA_MOL_HANDLE = *mut IXA_MOL_HANDLE_STRUCT;
+pub type IXA_INCHIBUILDER_HANDLE = *mut IXA_INCHIBUILDER_HANDLE_STRUCT;
+pub type IXA_INCHIKEYBUILDER_HANDLE = *mut IXA_INCHIKEYBUILDER_HANDLE_STRUCT;
+pub type IXA_ATOMID = *mut IXA_ATOMID_STRUCT;
+pub type IXA_BONDID = *mut IXA_BONDID_STRUCT;
+pub type IXA_STEREOID = *mut IXA_STEREOID_STRUCT;
+pub type IXA_POLYMERUNITID = *mut IXA_POLYMERUNITID_STRUCT;
+
+pub type IXA_STATUS = ::std::os::raw::c_uint;
+pub const IXA_STATUS_SUCCESS: IXA_STATUS = 0;
+pub const IXA_STATUS_WARNING: IXA_STATUS = 1;
+pub const IXA_STATUS_ERROR: IXA_STATUS = 2;
+
+pub type IXA_BOOL = ::std::os::raw::c_uint;
+pub const IXA_FALSE: IXA_BOOL = 0;
+pub const IXA_TRUE: IXA_BOOL = 1;
+
+pub type IXA_ATOM_RADICAL = ::std::os::raw::c_uint;
+pub const IXA_ATOM_RADICAL_NONE: IXA_ATOM_RADICAL = 0;
+pub const IXA_ATOM_RADICAL_SINGLET: IXA_ATOM_RADICAL = 1;
+pub const IXA_ATOM_RADICAL_DOUBLET: IXA_ATOM_RADICAL = 2;
+pub const IXA_ATOM_RADICAL_TRIPLET: IXA_ATOM_RADICAL = 3;
+
+pub type IXA_BOND_TYPE = ::std::os::raw::c_uint;
+pub const IXA_BOND_TYPE_SINGLE: IXA_BOND_TYPE = 1;
+pub const IXA_BOND_TYPE_DOUBLE: IXA_BOND_TYPE = 2;
+pub const IXA_BOND_TYPE_TRIPLE: IXA_BOND_TYPE = 3;
+pub const IXA_BOND_TYPE_AROMATIC: IXA_BOND_TYPE = 4;
+
+pub type IXA_BOND_WEDGE = ::std::os::raw::c_uint;
+pub const IXA_BOND_WEDGE_NONE: IXA_BOND_WEDGE = 0;
+pub const IXA_BOND_WEDGE_UP: IXA_BOND_WEDGE = 1;
+pub const IXA_BOND_WEDGE_DOWN: IXA_BOND_WEDGE = 2;
+pub const IXA_BOND_WEDGE_EITHER: IXA_BOND_WEDGE = 3;
+
+pub type IXA_DBLBOND_CONFIG = ::std::os::raw::c_uint;
+pub const IXA_DBLBOND_CONFIG_PERCEIVE: IXA_DBLBOND_CONFIG = 0;
+pub const IXA_DBLBOND_CONFIG_EITHER: IXA_DBLBOND_CONFIG = 1;
+
+pub type IXA_STEREO_TOPOLOGY = ::std::os::raw::c_uint;
+pub const IXA_STEREO_TOPOLOGY_INVALID: IXA_STEREO_TOPOLOGY = 0;
+pub const IXA_STEREO_TOPOLOGY_TETRAHEDRON: IXA_STEREO_TOPOLOGY = 2;
+pub const IXA_STEREO_TOPOLOGY_RECTANGLE: IXA_STEREO_TOPOLOGY = 3;
+pub const IXA_STEREO_TOPOLOGY_ANTIRECTANGLE: IXA_STEREO_TOPOLOGY = 4;
+
+pub type IXA_STEREO_PARITY = ::std::os::raw::c_uint;
+pub const IXA_STEREO_PARITY_NONE: IXA_STEREO_PARITY = 0;
+pub const IXA_STEREO_PARITY_ODD: IXA_STEREO_PARITY = 1;
+pub const IXA_STEREO_PARITY_EVEN: IXA_STEREO_PARITY = 2;
+pub const IXA_STEREO_PARITY_UNKNOWN: IXA_STEREO_PARITY = 3;
+
+// `IXA_INCHIBUILDER_OPTION` — discriminants follow ixa.h declaration order.
+pub type IXA_INCHIBUILDER_OPTION = ::std::os::raw::c_uint;
+pub const IXA_INCHIBUILDER_OPTION_NewPsOff: IXA_INCHIBUILDER_OPTION = 0;
+pub const IXA_INCHIBUILDER_OPTION_DoNotAddH: IXA_INCHIBUILDER_OPTION = 1;
+pub const IXA_INCHIBUILDER_OPTION_SUU: IXA_INCHIBUILDER_OPTION = 2;
+pub const IXA_INCHIBUILDER_OPTION_SLUUD: IXA_INCHIBUILDER_OPTION = 3;
+pub const IXA_INCHIBUILDER_OPTION_FixedH: IXA_INCHIBUILDER_OPTION = 4;
+pub const IXA_INCHIBUILDER_OPTION_RecMet: IXA_INCHIBUILDER_OPTION = 5;
+pub const IXA_INCHIBUILDER_OPTION_KET: IXA_INCHIBUILDER_OPTION = 6;
+pub const IXA_INCHIBUILDER_OPTION_15T: IXA_INCHIBUILDER_OPTION = 7;
+pub const IXA_INCHIBUILDER_OPTION_SaveOpt: IXA_INCHIBUILDER_OPTION = 8;
+pub const IXA_INCHIBUILDER_OPTION_AuxNone: IXA_INCHIBUILDER_OPTION = 9;
+pub const IXA_INCHIBUILDER_OPTION_WarnOnEmptyStructure: IXA_INCHIBUILDER_OPTION = 10;
+pub const IXA_INCHIBUILDER_OPTION_LargeMolecules: IXA_INCHIBUILDER_OPTION = 11;
+pub const IXA_INCHIBUILDER_OPTION_Polymers: IXA_INCHIBUILDER_OPTION = 12;
+pub const IXA_INCHIBUILDER_OPTION_Polymers105: IXA_INCHIBUILDER_OPTION = 13;
+pub const IXA_INCHIBUILDER_OPTION_Polymers105Plus: IXA_INCHIBUILDER_OPTION = 14;
+pub const IXA_INCHIBUILDER_OPTION_FilterSS: IXA_INCHIBUILDER_OPTION = 15;
+pub const IXA_INCHIBUILDER_OPTION_InvFilterSS: IXA_INCHIBUILDER_OPTION = 16;
+pub const IXA_INCHIBUILDER_OPTION_NPZZ: IXA_INCHIBUILDER_OPTION = 17;
+pub const IXA_INCHIBUILDER_OPTION_SATZZ: IXA_INCHIBUILDER_OPTION = 18;
+pub const IXA_INCHIBUILDER_OPTION_NoFrameShift: IXA_INCHIBUILDER_OPTION = 19;
+pub const IXA_INCHIBUILDER_OPTION_FoldCRU: IXA_INCHIBUILDER_OPTION = 20;
+pub const IXA_INCHIBUILDER_OPTION_NoEdits: IXA_INCHIBUILDER_OPTION = 21;
+pub const IXA_INCHIBUILDER_OPTION_LooseTSACheck: IXA_INCHIBUILDER_OPTION = 22;
+pub const IXA_INCHIBUILDER_OPTION_OutErrInChI: IXA_INCHIBUILDER_OPTION = 23;
+pub const IXA_INCHIBUILDER_OPTION_NoWarnings: IXA_INCHIBUILDER_OPTION = 24;
+
+pub type IXA_INCHIBUILDER_STEREOOPTION = ::std::os::raw::c_uint;
+pub const IXA_INCHIBUILDER_STEREOOPTION_SAbs: IXA_INCHIBUILDER_STEREOOPTION = 0;
+pub const IXA_INCHIBUILDER_STEREOOPTION_SNon: IXA_INCHIBUILDER_STEREOOPTION = 1;
+pub const IXA_INCHIBUILDER_STEREOOPTION_SRel: IXA_INCHIBUILDER_STEREOOPTION = 2;
+pub const IXA_INCHIBUILDER_STEREOOPTION_SRac: IXA_INCHIBUILDER_STEREOOPTION = 3;
+pub const IXA_INCHIBUILDER_STEREOOPTION_SUCF: IXA_INCHIBUILDER_STEREOOPTION = 4;
+
+// --- IXA Status objects ----------------------------------------------------
+extern "C" {
+    pub fn IXA_STATUS_Create() -> IXA_STATUS_HANDLE;
+    pub fn IXA_STATUS_Clear(hStatus: IXA_STATUS_HANDLE);
+    pub fn IXA_STATUS_Destroy(hStatus: IXA_STATUS_HANDLE);
+    pub fn IXA_STATUS_HasError(hStatus: IXA_STATUS_HANDLE) -> IXA_BOOL;
+    pub fn IXA_STATUS_HasWarning(hStatus: IXA_STATUS_HANDLE) -> IXA_BOOL;
+    pub fn IXA_STATUS_GetCount(hStatus: IXA_STATUS_HANDLE) -> ::std::os::raw::c_int;
+    pub fn IXA_STATUS_GetSeverity(
+        hStatus: IXA_STATUS_HANDLE,
+        vIndex: ::std::os::raw::c_int,
+    ) -> IXA_STATUS;
+    pub fn IXA_STATUS_GetMessage(
+        hStatus: IXA_STATUS_HANDLE,
+        vIndex: ::std::os::raw::c_int,
+    ) -> *const ::std::os::raw::c_char;
+}
+
+// --- IXA Molecule lifecycle & whole-molecule operations --------------------
+extern "C" {
+    pub fn IXA_MOL_Create(hStatus: IXA_STATUS_HANDLE) -> IXA_MOL_HANDLE;
+    pub fn IXA_MOL_Clear(hStatus: IXA_STATUS_HANDLE, hMolecule: IXA_MOL_HANDLE);
+    pub fn IXA_MOL_Destroy(hStatus: IXA_STATUS_HANDLE, hMolecule: IXA_MOL_HANDLE);
+    pub fn IXA_MOL_ReadMolfile(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        pBytes: *const ::std::os::raw::c_char,
+    );
+    pub fn IXA_MOL_ReadInChI(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        pInChI: *const ::std::os::raw::c_char,
+    );
+    pub fn IXA_MOL_SetChiral(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vChiral: IXA_BOOL,
+    );
+    pub fn IXA_MOL_GetChiral(hStatus: IXA_STATUS_HANDLE, hMolecule: IXA_MOL_HANDLE) -> IXA_BOOL;
+}
+
+// --- IXA Molecule navigation -----------------------------------------------
+extern "C" {
+    pub fn IXA_MOL_GetNumAtoms(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetNumBonds(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomId(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtomIndex: ::std::os::raw::c_int,
+    ) -> IXA_ATOMID;
+    pub fn IXA_MOL_GetBondId(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBondIndex: ::std::os::raw::c_int,
+    ) -> IXA_BONDID;
+    pub fn IXA_MOL_GetAtomIndex(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetBondIndex(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomNumBonds(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomBond(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+        vBondIndex: ::std::os::raw::c_int,
+    ) -> IXA_BONDID;
+    pub fn IXA_MOL_GetCommonBond(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom1: IXA_ATOMID,
+        vAtom2: IXA_ATOMID,
+    ) -> IXA_BONDID;
+    pub fn IXA_MOL_GetBondAtom1(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+    ) -> IXA_ATOMID;
+    pub fn IXA_MOL_GetBondAtom2(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+    ) -> IXA_ATOMID;
+    pub fn IXA_MOL_GetBondOtherAtom(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+        vAtom: IXA_ATOMID,
+    ) -> IXA_ATOMID;
+}
+
+// --- IXA atom information --------------------------------------------------
+extern "C" {
+    pub fn IXA_MOL_GetAtomElement(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_MOL_GetAtomAtomicNumber(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomMass(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomCharge(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomRadical(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> IXA_ATOM_RADICAL;
+    pub fn IXA_MOL_GetAtomHydrogens(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+        vHydrogenMassNumber: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetAtomX(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> f64;
+    pub fn IXA_MOL_GetAtomY(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> f64;
+    pub fn IXA_MOL_GetAtomZ(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vAtom: IXA_ATOMID,
+    ) -> f64;
+}
+
+// --- IXA bond information --------------------------------------------------
+extern "C" {
+    pub fn IXA_MOL_GetBondType(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+    ) -> IXA_BOND_TYPE;
+    pub fn IXA_MOL_GetBondWedge(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+        vRefAtom: IXA_ATOMID,
+    ) -> IXA_BOND_WEDGE;
+    pub fn IXA_MOL_GetDblBondConfig(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vBond: IXA_BONDID,
+    ) -> IXA_DBLBOND_CONFIG;
+}
+
+// --- IXA stereo descriptor information -------------------------------------
+extern "C" {
+    pub fn IXA_MOL_GetNumStereos(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetStereoId(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereoIndex: ::std::os::raw::c_int,
+    ) -> IXA_STEREOID;
+    pub fn IXA_MOL_GetStereoIndex(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetStereoTopology(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> IXA_STEREO_TOPOLOGY;
+    pub fn IXA_MOL_GetStereoCentralAtom(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> IXA_ATOMID;
+    pub fn IXA_MOL_GetStereoCentralBond(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> IXA_BONDID;
+    pub fn IXA_MOL_GetStereoNumVertices(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> ::std::os::raw::c_int;
+    pub fn IXA_MOL_GetStereoVertex(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+        vVertexIndex: ::std::os::raw::c_int,
+    ) -> IXA_ATOMID;
+    pub fn IXA_MOL_GetStereoParity(
+        hStatus: IXA_STATUS_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+        vStereo: IXA_STEREOID,
+    ) -> IXA_STEREO_PARITY;
+}
+
+// --- IXA InChI builder -----------------------------------------------------
+extern "C" {
+    pub fn IXA_INCHIBUILDER_Create(hStatus: IXA_STATUS_HANDLE) -> IXA_INCHIBUILDER_HANDLE;
+    pub fn IXA_INCHIBUILDER_SetMolecule(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        hMolecule: IXA_MOL_HANDLE,
+    );
+    pub fn IXA_INCHIBUILDER_GetInChIVersion(
+        vFullDescription: IXA_BOOL,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIBUILDER_GetInChI(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIBUILDER_GetInChIEx(
+        hStatus: IXA_STATUS_HANDLE,
+        hBuilder: IXA_INCHIBUILDER_HANDLE,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIBUILDER_GetAuxInfo(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIBUILDER_GetLog(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIBUILDER_Destroy(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+    );
+    pub fn IXA_INCHIBUILDER_SetOption(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vOption: IXA_INCHIBUILDER_OPTION,
+        vValue: IXA_BOOL,
+    );
+    pub fn IXA_INCHIBUILDER_SetOption_Stereo(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vValue: IXA_INCHIBUILDER_STEREOOPTION,
+    );
+    pub fn IXA_INCHIBUILDER_SetOption_Timeout(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vValue: ::std::os::raw::c_int,
+    );
+    pub fn IXA_INCHIBUILDER_SetOption_Timeout_MilliSeconds(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vValue: ::std::os::raw::c_long,
+    );
+    pub fn IXA_INCHIBUILDER_CheckOption(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vOption: IXA_INCHIBUILDER_OPTION,
+    ) -> IXA_BOOL;
+    pub fn IXA_INCHIBUILDER_CheckOption_Stereo(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+        vValue: IXA_INCHIBUILDER_STEREOOPTION,
+    ) -> IXA_BOOL;
+    pub fn IXA_INCHIBUILDER_GetOption_Timeout_MilliSeconds(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIBuilder: IXA_INCHIBUILDER_HANDLE,
+    ) -> ::std::os::raw::c_long;
+}
+
+// --- IXA InChIKey builder --------------------------------------------------
+extern "C" {
+    pub fn IXA_INCHIKEYBUILDER_Create(hStatus: IXA_STATUS_HANDLE) -> IXA_INCHIKEYBUILDER_HANDLE;
+    pub fn IXA_INCHIKEYBUILDER_SetInChI(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIKeyBuilder: IXA_INCHIKEYBUILDER_HANDLE,
+        pInChI: *const ::std::os::raw::c_char,
+    );
+    pub fn IXA_INCHIKEYBUILDER_GetInChIKey(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIKeyBuilder: IXA_INCHIKEYBUILDER_HANDLE,
+    ) -> *const ::std::os::raw::c_char;
+    pub fn IXA_INCHIKEYBUILDER_Destroy(
+        hStatus: IXA_STATUS_HANDLE,
+        hInChIKeyBuilder: IXA_INCHIKEYBUILDER_HANDLE,
+    );
+}

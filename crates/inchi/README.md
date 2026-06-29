@@ -8,7 +8,7 @@ Safe, idiomatic Rust bindings to the IUPAC [InChI](https://www.inchi-trust.org/)
 
 ```toml
 [dependencies]
-inchi = "0.1"
+inchi = "0.1.4"
 ```
 
 ## Example
@@ -49,6 +49,7 @@ let out = from_molfile(molfile, Options::new().fixed_h(true).stereo(StereoMode::
 | --------- | ------------ |
 | Structure → InChI | [`from_molfile`], [`Molecule::to_inchi`] |
 | InChI → structure | [`struct_from_inchi`], [`struct_from_inchi_ex`] (polymers), [`struct_from_aux_info`] |
+| Queryable molecules | [`IxaMolecule::from_molfile`], [`IxaMolecule::from_inchi`] (inspect atoms/bonds/stereo, regenerate InChI/InChIKey) |
 | InChI → InChIKey | [`inchikey`], [`inchikey_with_hashes`] |
 | Convert / validate | [`inchi_to_inchi`], [`check_inchi`], [`check_inchikey`] |
 
@@ -77,6 +78,8 @@ MIT. Bundles the IUPAC InChI software (MIT); see [`inchi-sys`](https://crates.io
 [`Molecule::add_polymer_unit`]: https://docs.rs/inchi/latest/inchi/struct.Molecule.html#method.add_polymer_unit
 [`struct_from_inchi`]: https://docs.rs/inchi/latest/inchi/fn.struct_from_inchi.html
 [`struct_from_inchi_ex`]: https://docs.rs/inchi/latest/inchi/fn.struct_from_inchi_ex.html
+[`IxaMolecule::from_molfile`]: https://docs.rs/inchi/latest/inchi/struct.IxaMolecule.html#method.from_molfile
+[`IxaMolecule::from_inchi`]: https://docs.rs/inchi/latest/inchi/struct.IxaMolecule.html#method.from_inchi
 [`struct_from_aux_info`]: https://docs.rs/inchi/latest/inchi/fn.struct_from_aux_info.html
 [`inchikey`]: https://docs.rs/inchi/latest/inchi/fn.inchikey.html
 [`inchikey_with_hashes`]: https://docs.rs/inchi/latest/inchi/fn.inchikey_with_hashes.html

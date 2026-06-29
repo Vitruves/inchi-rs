@@ -159,6 +159,36 @@
 //! # Ok::<(), inchi::InchiError>(())
 //! ```
 //!
+//! # Queryable molecules (IXA)
+//!
+//! [`struct_from_inchi`](crate::struct_from_inchi) hands back a structure as
+//! fixed arrays. When you want a *live* object to interrogate atom-by-atom — or
+//! to load a Molfile once and both inspect it and (re)generate its InChI — reach
+//! for [`IxaMolecule`](crate::IxaMolecule), built on the InChI eXtensible API.
+//!
+//! ```
+//! use inchi::{IxaMolecule, BondOrder};
+//!
+//! // Reconstruct ethanol from its InChI, then walk its heavy-atom skeleton.
+//! let mol = IxaMolecule::from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")?;
+//! assert_eq!(mol.atom_count(), 3); // C, C, O — hydrogens stay implicit
+//!
+//! for bond in mol.bonds() {
+//!     assert_eq!(mol.bond_order(bond)?, BondOrder::Single);
+//! }
+//!
+//! // Regenerate the identifier (and the InChIKey) straight from the object.
+//! assert_eq!(mol.to_inchi(())?.inchi(), "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3");
+//! assert_eq!(mol.to_inchikey(())?, "LFQSCWFLJHTTHZ-UHFFFAOYSA-N");
+//! # Ok::<(), inchi::InchiError>(())
+//! ```
+//!
+//! Atom positions are zero for InChI-derived molecules (an InChI stores no
+//! geometry); use [`IxaMolecule::from_molfile`](crate::IxaMolecule::from_molfile)
+//! when you need the original coordinates. Stereo descriptors are populated when
+//! reading an InChI (encoded in the `/t` layer) but not from a Molfile, where
+//! stereochemistry is perceived later during generation.
+//!
 //! # Thread safety and reuse
 //!
 //! The InChI C library keeps internal `static` state and is not re-entrant, so

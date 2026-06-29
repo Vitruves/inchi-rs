@@ -82,4 +82,46 @@ mod smoke {
 
         assert_eq!(inchi, "InChI=1S/CH4/h1H4");
     }
+
+    /// Proves the manually maintained IXA declarations link against the
+    /// vendored library and produce the same InChI through the extensible API.
+    #[test]
+    fn methane_via_ixa() {
+        let molfile = std::ffi::CString::new(METHANE_MOLFILE).expect("no interior NUL");
+
+        unsafe {
+            let status = IXA_STATUS_Create();
+            assert!(!status.is_null(), "IXA_STATUS_Create returned null");
+            let mol = IXA_MOL_Create(status);
+            assert!(!mol.is_null(), "IXA_MOL_Create returned null");
+
+            IXA_MOL_ReadMolfile(status, mol, molfile.as_ptr());
+            assert_eq!(
+                IXA_STATUS_HasError(status),
+                IXA_FALSE,
+                "ReadMolfile errored"
+            );
+            assert_eq!(
+                IXA_MOL_GetNumAtoms(status, mol),
+                1,
+                "expected one heavy atom"
+            );
+
+            let builder = IXA_INCHIBUILDER_Create(status);
+            assert!(!builder.is_null(), "IXA_INCHIBUILDER_Create returned null");
+            IXA_INCHIBUILDER_SetMolecule(status, builder, mol);
+            let inchi_ptr = IXA_INCHIBUILDER_GetInChI(status, builder);
+            assert!(!inchi_ptr.is_null(), "GetInChI returned null");
+            let inchi = CStr::from_ptr(inchi_ptr)
+                .to_str()
+                .expect("InChI is valid UTF-8")
+                .to_owned();
+
+            IXA_INCHIBUILDER_Destroy(status, builder);
+            IXA_MOL_Destroy(status, mol);
+            IXA_STATUS_Destroy(status);
+
+            assert_eq!(inchi, "InChI=1S/CH4/h1H4");
+        }
+    }
 }

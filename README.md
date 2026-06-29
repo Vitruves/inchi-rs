@@ -15,7 +15,7 @@ Rust bindings to the IUPAC [InChI](https://www.inchi-trust.org/) reference libra
 
 ```toml
 [dependencies]
-inchi = "0.1"
+inchi = "0.1.4"
 ```
 
 ```rust
@@ -57,6 +57,7 @@ The full InChI generation, parsing, and validation API:
 | --------- | --------- |
 | Structure → InChI | `from_molfile`, `from_sdf`, `Molecule::to_inchi` |
 | InChI → structure | `struct_from_inchi`, `struct_from_inchi_ex` (polymers), `struct_from_aux_info` |
+| Queryable molecules | `IxaMolecule::from_molfile`, `IxaMolecule::from_inchi` (atom/bond/stereo inspection, regenerate InChI/InChIKey) |
 | InChI → InChIKey | `inchikey`, `inchikey_with_hashes` |
 | Convert / validate | `inchi_to_inchi`, `check_inchi`, `check_inchikey` |
 

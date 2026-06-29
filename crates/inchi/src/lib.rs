@@ -59,6 +59,11 @@
 //! - [`struct_from_inchi_ex`] — the above plus polymer data (`GetStructFromINCHIEx`).
 //! - [`struct_from_aux_info`] — recover a structure from an `AuxInfo` block.
 //!
+//! **Queryable molecules** (IXA extensible API)
+//! - [`IxaMolecule::from_molfile`] — parse a Molfile into a live, queryable mol object.
+//! - [`IxaMolecule::from_inchi`] — reconstruct atom/bond structure from an InChI string,
+//!   then inspect it atom-by-atom or regenerate the InChI/InChIKey.
+//!
 //! **InChI → InChIKey** (feature `key`)
 //! - [`inchikey`] / [`inchikey_with_hashes`] (`GetINCHIKeyFromINCHI`).
 //!
@@ -101,6 +106,7 @@ pub mod guide;
 
 mod convert;
 mod error;
+mod ixa;
 mod molecule;
 mod options;
 mod output;
@@ -111,6 +117,7 @@ mod validate;
 
 pub use convert::inchi_to_inchi;
 pub use error::{InchiError, Result, Status};
+pub use ixa::{AtomId, BondId, IxaMolecule, StereoId};
 pub use molecule::{Atom, BondOrder, ImplicitH, Molecule, Parity, Radical, Stereo};
 pub use options::{Options, Polymers, StereoMode};
 pub use output::InchiOutput;
@@ -204,9 +211,10 @@ pub fn from_sdf(
     sdf.split("$$$$")
         .filter(|record| !record.trim().is_empty())
         // Each segment after a `$$$$` separator starts with the newline that
-        // terminated the `$$$$` line itself. Strip it so that the mol-name
-        // line lands on line 1 as the Molfile format requires.
-        .map(move |record| from_molfile(record.trim_start_matches('\n'), options.clone()))
+        // terminated the `$$$$` line itself. Strip it (handling both LF and
+        // CRLF) so that the mol-name line lands on line 1 as the Molfile
+        // format requires.
+        .map(move |record| from_molfile(record.trim_start_matches(['\n', '\r']), options.clone()))
 }
 
 /// Computes the 27-character InChIKey for an InChI string.

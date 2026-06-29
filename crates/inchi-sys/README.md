@@ -6,13 +6,13 @@ Low-level `-sys` FFI bindings to the vendored IUPAC [InChI](https://www.inchi-tr
 
 ## Use the `inchi` crate instead
 
-This crate exposes only **raw, `unsafe` C bindings** (`GetINCHI`, `GetStructFromINCHI`, `GetINCHIKeyFromINCHI`, `MakeINCHIFromMolfileText`, the `*Ex` polymer entry points, …) with no safety, RAII, or ergonomics.
+This crate exposes only **raw, `unsafe` C bindings** (`GetINCHI`, `GetStructFromINCHI`, `GetINCHIKeyFromINCHI`, `MakeINCHIFromMolfileText`, the `*Ex` polymer entry points, the `IXA_*` extensible-API functions, …) with no safety, RAII, or ergonomics.
 
 For almost all uses, depend on the safe, idiomatic wrapper:
 
 ```toml
 [dependencies]
-inchi = "0.1"
+inchi = "0.1.4"
 ```
 
 → **<https://crates.io/crates/inchi>** · **<https://docs.rs/inchi>**
