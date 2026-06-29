@@ -81,7 +81,9 @@ unsafe impl Sync for IxaHandles {}
 /// A molecule loaded from a Molfile or InChI string, queryable atom-by-atom and
 /// convertible back into an InChI or InChIKey.
 ///
-/// See the [module documentation](self) for an overview.
+/// Build one with [`IxaMolecule::from_molfile`] or [`IxaMolecule::from_inchi`],
+/// inspect it through the atom/bond/stereo accessors, then regenerate its
+/// identifier with [`IxaMolecule::to_inchi`].
 pub struct IxaMolecule(IxaHandles);
 
 impl IxaMolecule {
